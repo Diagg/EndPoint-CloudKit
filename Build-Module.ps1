@@ -20,7 +20,8 @@ $Params = @{
     "AliasesToExport" 		= @()
     "PowerShellVersion"     = '5.1'
     "Tags"                  = @('PSEdition_Desktop', 'Windows')
-    "ProjectUri"            = 'https://github.com/Diagg'
+    "ProjectUri"            = 'https://github.com/Diagg/EndPoint-CloudKit'
+    "LicenseUri"            = 'https://raw.githubusercontent.com/Diagg/EndPoint-CloudKit/main/LICENSE'
     "Description"           = @'
 Endpoint Cloud kit Module (ECK), a set of cmdlet to help building scripts or application deployed by your MDM (Intune/Workspace One...)
 
@@ -66,7 +67,7 @@ If (-not (test-path "$NugetPath\Nuget.exe")){Invoke-WebRequest -Uri 'https://aka
 Install-Module -Name PSScriptAnalyzer
 Get-ChildItem $Script:CurrentScriptPath -Filter '*.ps1' -Recurse | Invoke-ScriptAnalyzer -Fix
 
-#Copy Module to releas folder
+#Copy Module to release folder
 $ReleasePath = "$($Script:CurrentScriptPath)\Release"
 remove-item "$ReleasePath\EndpointCloudkit" -Force -Recurse -ErrorAction SilentlyContinue|Out-Null
 Copy-Item "$($Script:CurrentScriptPath)\Source\" "$ReleasePath\" -Recurse -Force|Out-Null
@@ -77,6 +78,3 @@ Rename-Item "$ReleasePath\Source" -NewName "EndpointCloudkit"|Out-Null
 ## Test before Publishing module
 Publish-Module -Path "$ReleasePath\EndpointCloudkit" -NuGetApiKey $apiKey -Verbose -whatIf
 Publish-Module -Path "$ReleasePath\EndpointCloudkit" -NuGetApiKey $apiKey -Verbose
-
-
-

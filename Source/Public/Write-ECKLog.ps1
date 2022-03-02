@@ -45,5 +45,5 @@
                 If ([System.Diagnostics.EventLog]::SourceExists($AppriendlyName) -eq $false){New-EventLog -LogName "Application" -Source $AppriendlyName}
                 Write-EventLog -LogName "Application" -Source $AppriendlyName -EventID $EventLogID -EntryType $($MessageType[$type]) -Message $Message -Category 0
             }
-            
+
     }

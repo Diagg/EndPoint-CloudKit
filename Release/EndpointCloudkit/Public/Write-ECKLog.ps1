@@ -3,6 +3,7 @@
         # Version 1.3   - 14/02/2022 - replaced write-host by Write-output
         # Version 1.4.1 - 21/02/2022 - removed $Script scoped variable to work with Module
         # Version 1.5   - 22/02/2022 - reworked logic
+        # Version 1.6   - 25/02/2022 - Bug fix: you could not write only event
 
         [CmdletBinding()]
         [Alias('Write-Log')]
@@ -23,8 +24,8 @@
 		      [Int]$Type = 1
         )
 
-        If (-Not $path -and -not $EventLogID)
-            {Write-Warning "[Warning] No Log path or Event ID specified, nothing logged !!"}
+        If (-Not $path -and -not $EventLogOnly)
+            {Write-Warning "[Warning] No Log path or EventLogOnly specified, nothing logged !!"}
         Else
             {
                 $oDate = $(Get-Date -Format "M-d-yyyy")
@@ -33,18 +34,16 @@
                 $Tab = [char]9
 
                 # Write the line to the log file
-                If (-not $EventLogOnly)
-                    {
-                        $Content = "$oDate $oHour, $($MessageType[$type]) $Tab $($Message -replace "`r`n", ", ")"
-                        $Content| Out-file -FilePath $Path -Encoding UTF8 -Append -ErrorAction SilentlyContinue
-                        If ($OutputToConsole -eq $true){Write-output $Content}
-                    }
+                $Content = "$oDate $oHour, $($MessageType[$type]) $Tab $($Message -replace "`r`n", ", ")"
+                $Content| Out-file -FilePath $Path -Encoding UTF8 -Append -ErrorAction SilentlyContinue
+                If ($OutputToConsole -eq $true){Write-output $Content}
+             }
 
-                If ($EventLogID)
-                    {
-                        $AppriendlyName = $(Split-Path $Path -Leaf) -replace "-" ,"" -replace ".ps1","" -replace " ",""
-                        If ([System.Diagnostics.EventLog]::SourceExists($AppriendlyName) -eq $false){New-EventLog -LogName "Application" -Source $AppriendlyName}
-                        Write-EventLog -LogName "Application" -Source $AppriendlyName -EventID $EventLogID -EntryType $($MessageType[$type]) -Message $Message -Category 0
-                    }
+        If ($EventLogID)
+            {
+                $AppriendlyName = $(Split-Path $Path -Leaf) -replace "-" ,"" -replace ".ps1","" -replace " ",""
+                If ([System.Diagnostics.EventLog]::SourceExists($AppriendlyName) -eq $false){New-EventLog -LogName "Application" -Source $AppriendlyName}
+                Write-EventLog -LogName "Application" -Source $AppriendlyName -EventID $EventLogID -EntryType $($MessageType[$type]) -Message $Message -Category 0
             }
+
     }
