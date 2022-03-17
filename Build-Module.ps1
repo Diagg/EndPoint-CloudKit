@@ -6,7 +6,7 @@ $apiKey = ''
 
 
 $Params = @{
-    "ModuleVersion"         = '0.0.6'
+    "ModuleVersion"         = '0.0.7'
     "RootModule" = 'EndpointCloudkit.psm1'
     "GUID"                  = 'd1488437-3d1f-439e-b188-30e208cbd9df'
     "Path" 				    = "$($Script:CurrentScriptPath)\Source\EndpointCloudkit.psd1"
@@ -40,7 +40,8 @@ Endpoint Cloud kit Module (ECK), a set of cmdlet to help building scripts or app
 0.0.3 2022/02/21 * beta release - Invoke-ECKScheduledTask was missing
 0.0.4 2022/02/22 * beta release - reworked Write-ECKlog
 0.0.5 2022/02/23 * beta release - First stable version
-0.0.6 2022/03/02 * Beta version - Fixed a bug Write-ECKlog
+0.0.6 2022/03/02 * Beta version - Fixed a bug in Write-ECKlog
+0.0.7 2022/03/08 * Beta version - Fixed a bug in Invoke-ECKScheduledTask
 '@
 }
 

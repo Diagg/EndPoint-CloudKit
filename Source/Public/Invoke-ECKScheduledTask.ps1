@@ -1,6 +1,7 @@
 ﻿Function Invoke-ECKScheduledTask
     {
         # Version 3.4 - 17/02/2022 - Tasks run imedialtly are deleted once launched
+        # Version 3.5 - 08/03/2022 - Fixed a bug in task detection with argument 'Now', Removed parameter 'Interactive'
 
         [CmdletBinding()]
         param (
@@ -20,7 +21,6 @@
             [ValidateSet("System","SYSTEM","system","User","USER","user","Admin","ADMIN","admin")]
             [String]$Context = "System",
             [String]$TaskNamePrefix = "ECK",
-            [switch]$Interactive,
             [string]$Description = "Scheduled task created from Powershell",
             [switch]$now,
             [switch]$AtStartup, #Machine
@@ -37,16 +37,12 @@
         Try
             {
                 #Created Scheduled Task
-                $TaskName = $TaskName.Replace(" ","_")
-                $taskName = $TaskName + $(split-path $HostScriptPath -leaf).Replace("-","").replace(".ps1","").replace(" ","")
                 $ToastGUID = ([guid]::NewGuid()).ToString().ToUpper()
                 $Task_TimeToRun = (Get-Date).AddSeconds(5).ToString('s')
                 $Task_Expiry = (Get-Date).AddSeconds($DefaultTaskExpiration).ToString('s')
 
-                if ($Interactive) {$LogonType = "Interactive"} Else {$LogonType = "ServiceAccount"}
-
                 If ($Context.ToUpper() -eq "SYSTEM")
-                    {$Task_Principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -LogonType $LogonType -RunLevel Highest}
+                    {$Task_Principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -RunLevel Highest}
                 elseif ($Context.ToUpper() -eq "ADMIN")
                     {
                         #Creat Admin Account
@@ -134,7 +130,12 @@
                 If ($NormalTaskName)
                     {$TaskFullName = $TaskName ; $PreviousTaskName = $TaskName}
                 Else
-                    {$TaskFullName = $($TaskNamePrefix + "_" + $TaskName + "_" + $ToastGuid) ; $PreviousTaskName = $($TaskNamePrefix + "_" + $TaskName + "_" + "*-*-*-*-*")}
+                    {
+                        $TaskName = $TaskName.Replace(" ","_")
+                        $taskName = $TaskName + $(split-path $HostScriptPath -leaf).Replace("-","").replace(".ps1","").replace(" ","")
+                        $TaskFullName = $($TaskNamePrefix + "_" + $TaskName + "_" + $ToastGuid)
+                        $PreviousTaskName = $($TaskNamePrefix + "_" + $TaskName + "_" + "*-*-*-*-*")
+                    }
 
                 If ($LogPath) {Write-ECKLog "Created Task name: $TaskFullName" -Path $LogPath}
                 If ($LogPath) {Write-ECKLog "Command to run is: $command $Parameters" -Path $LogPath}
@@ -167,9 +168,15 @@
                     {
                         Start-ScheduledTask -TaskName $TaskFullName
 
-                        While((Get-ScheduledTask $TaskFullName).State -ne 'Running'){Start-Sleep -Seconds 1}
-                        If ($LogPath) {Write-ECKLog "Task $TaskFullName now launched in $context context !" -Path $LogPath}
-                        If (-Not ($DontAutokilltask)) {Unregister-ScheduledTask -TaskName $TaskFullName -Confirm:$false}
+                        $Count = 0
+                        While((Get-ScheduledTask $TaskFullName -ErrorAction SilentlyContinue).State -ne 'Running' -and $count -le 8){Start-Sleep -Seconds 1 ; $Count +=1 }
+                        try
+                            {
+                                Get-ScheduledTask $TaskFullName -ErrorAction Stop
+                                If ($LogPath) {Write-ECKLog "Task $TaskFullName now launched in $context context !" -Path $LogPath}
+                            }
+                        Catch {If ($LogPath) {Write-ECKLog "[ERROR] Unable to Launch Task $TaskFullName in $context context !" -Path $LogPath -Type 3}}
+                        If (-Not ($DontAutokilltask)) {Unregister-ScheduledTask -TaskName $TaskFullName -Confirm:$false -ErrorAction SilentlyContinue}
 
                     }
                 Else
