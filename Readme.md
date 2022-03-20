@@ -6,12 +6,12 @@ Endpoint Cloud kit Module (ECK) is a set of cmdlet to help building scripts or a
 
 ECK can be used to:
 - Run Powershell script or executable in User/system/admin context
-- Restart your script after reboot
-- Logging function
-- Configurable reboot toast notifications
-- Execution context (Admin/system/user) detection
-- Pending reboot detection
-- Windows Build converter to friendly name (like 21H2)
+- Restart your script after reboot.
+- Logging.
+- set customizable reboot toast notifications.
+- Detect execution context (Admin/system/user).
+- Detect Pending reboot.
+- Converter Windows Build number to friendly name (like 21H2)
 
 ## Installation
 Endpoint cloud Kit is published to the [Powershell Gallery](https://www.powershellgallery.com/packages/EndpointCloudkit) and can installed as a standard module:
