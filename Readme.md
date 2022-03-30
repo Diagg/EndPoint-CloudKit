@@ -2,7 +2,7 @@
 
 Endpoint Cloud kit Module (ECK), a set of cmdlet to help building scripts or application deployed by your MDM (Intune/Workspace One...)
 
-- Run Powershell script or executable in User/system/admin context
+- Run Powershell script or executable in User/system/admin/Trusted Installer/System Interactive context
 - Restart your script after reboot
 - Logging function
 - Configurable reboot toast notifications
