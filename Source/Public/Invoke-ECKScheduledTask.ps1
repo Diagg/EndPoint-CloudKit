@@ -2,10 +2,12 @@
     {
         # Version 3.4 - 17/02/2022 - Tasks run imedialtly are deleted once launched
         # Version 3.5 - 08/03/2022 - Fixed a bug in task detection with argument 'Now', Removed parameter 'Interactive'
+        # Version 3.6 - 21/03/2022 - Task can now run as trusted Installer
+        # Version 3.7 - 30/03/2022 - Leverage ServiceUI.exe to run task interactivelly, added back parameter 'Interactive'
 
         [CmdletBinding()]
         param (
-            [Parameter(Mandatory = $true, Position=0)]
+            [Parameter(Mandatory = $true)]
             [String]$HostScriptPath,
             [Parameter(Mandatory = $true, ParameterSetName = 'Command')]
             [String]$command,
@@ -18,11 +20,12 @@
             [Parameter(ParameterSetName = 'Command')]
             [string]$Parameters,
             [object]$triggerObject,
-            [ValidateSet("System","SYSTEM","system","User","USER","user","Admin","ADMIN","admin")]
+            [ValidateSet("System","SYSTEM","system","User","USER","user","Admin","ADMIN","admin","TI","ti","Ti")]
             [String]$Context = "System",
             [String]$TaskNamePrefix = "ECK",
-            [string]$Description = "Scheduled task created from Powershell",
+            [string]$Description = "Scheduled task created from Powershell by ECK Module",
             [switch]$now,
+            [switch]$Interactive,            
             [switch]$AtStartup, #Machine
             [switch]$AtLogon, #User
             [switch]$DontAutokilltask,
@@ -41,8 +44,20 @@
                 $Task_TimeToRun = (Get-Date).AddSeconds(5).ToString('s')
                 $Task_Expiry = (Get-Date).AddSeconds($DefaultTaskExpiration).ToString('s')
 
+                #Check interactive prereqs
+                If ($Interactive.IsPresent)
+                    {
+                        If (-not (Test-path "C:\Windows\System32\serviceUI.exe"))
+                            {
+                                If ($LogPath) {Write-ECKLog "ServiceUI.exe is not found in C:\Windows\System32, Unable to work in interactive mode" -Path $LogPath -Type 3}
+                                Remove-Variable -Name "Interactive" -Force -Confirm:$false    
+                            }
+                    }
+
                 If ($Context.ToUpper() -eq "SYSTEM")
                     {$Task_Principal = New-ScheduledTaskPrincipal -UserID "NT AUTHORITY\SYSTEM" -RunLevel Highest}
+                ElseIf ($Context.ToUpper() -eq "TI")
+                    {$Task_Principal = New-ScheduledTaskPrincipal -UserID "NT SERVICE\TrustedInstaller" -RunLevel Highest}
                 elseif ($Context.ToUpper() -eq "ADMIN")
                     {
                         #Creat Admin Account
@@ -93,9 +108,19 @@
                 If ($command)
                     {
                         If([String]::IsNullOrWhiteSpace($Parameters))
-                            {$Task_Action = New-ScheduledTaskAction -Execute $command}
+                            {
+                                If ($Interactive.IsPresent -and $Context.ToUpper() -eq "SYSTEM")
+                                    {$Task_Action = New-ScheduledTaskAction -Execute "C:\Windows\system32\ServiceUI.exe" -Argument $( "-process:explorer.exe " + $command)}
+                                else 
+                                    {$Task_Action = New-ScheduledTaskAction -Execute $command}
+                            }
                         Else
-                            {$Task_Action = New-ScheduledTaskAction -Execute $command -Argument $Parameters}
+                            {
+                                If ($Interactive.IsPresent -and $Context.ToUpper() -eq "SYSTEM")
+                                    {$Task_Action = New-ScheduledTaskAction -Execute "C:\Windows\system32\ServiceUI.exe" -Argument $( "-process:explorer.exe " + $command + " " + $Parameters)}
+                                else 
+                                    {$Task_Action = New-ScheduledTaskAction -Execute $command -Argument $Parameters}
+                            }
                     }
 
                 If ($ScriptBlock)
@@ -121,7 +146,11 @@
                             {$command = "C:\Windows\System32\Windowspowershell\v1.0\powershell.exe"}
 
                         $Parameters = "-executionpolicy bypass -noprofile -WindowStyle Hidden -file ""$ScriptPath"""
-                        $Task_Action = New-ScheduledTaskAction -Execute $command -Argument $Parameters
+                        
+                        If ($Interactive.IsPresent -and $Context.ToUpper() -eq "SYSTEM")
+                            {$Task_Action = New-ScheduledTaskAction -Execute "C:\Windows\system32\ServiceUI.exe" -Argument $( "-process:explorer.exe " + $command + " " + $Parameters)}
+                        else 
+                            {$Task_Action = New-ScheduledTaskAction -Execute $command -Argument $Parameters}
                     }
 
 
@@ -166,7 +195,7 @@
 
                 If ($now)
                     {
-                        Start-ScheduledTask -TaskName $TaskFullName
+                        Start-ScheduledTask -TaskName $TaskFullName|Out-Null
 
                         $Count = 0
                         While((Get-ScheduledTask $TaskFullName -ErrorAction SilentlyContinue).State -ne 'Running' -and $count -le 8){Start-Sleep -Seconds 1 ; $Count +=1 }
