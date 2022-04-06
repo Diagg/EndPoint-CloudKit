@@ -4,11 +4,12 @@
         # Version 3.5 - 08/03/2022 - Fixed a bug in task detection with argument 'Now', Removed parameter 'Interactive'
         # Version 3.6 - 21/03/2022 - Task can now run as trusted Installer
         # Version 3.7 - 30/03/2022 - Leverage ServiceUI.exe to run task interactivelly, added back parameter 'Interactive'
+        # Version 3.8 - 05/04/2022 - ServiceUI is seeked in different location, thanks to Bertrand J. 
 
         [CmdletBinding()]
         param (
-            [Parameter(Mandatory = $true)]
-            [String]$HostScriptPath,
+            [Parameter(Mandatory = $false)]
+            [String]$HostScriptPath = $ECK.ScriptFullName,
             [Parameter(Mandatory = $true, ParameterSetName = 'Command')]
             [String]$command,
             [Parameter(Mandatory = $true, ParameterSetName = 'Script')]
@@ -25,7 +26,7 @@
             [String]$TaskNamePrefix = "ECK",
             [string]$Description = "Scheduled task created from Powershell by ECK Module",
             [switch]$now,
-            [switch]$Interactive,            
+            [switch]$Interactive,
             [switch]$AtStartup, #Machine
             [switch]$AtLogon, #User
             [switch]$DontAutokilltask,
@@ -34,8 +35,10 @@
             [Switch]$AllowUsersFullControl, #allow user to delete his own task
             [Switch]$ForceStandardPSConsole, #force use of Powershell.exe instead of Powershellw.exe
             [String]$AdminAccountName = 'SRVECK', #Temporary admin account used to run task as elevated user. (The account is created/managed by the function and does not need to exists already !)
-            [String]$LogPath
+            [String]$LogPath = $ECK.LogFullName 
         )
+
+        If ([string]::IsNullOrWhiteSpace($LogPath)){Set-ECKEnvironment ; $LogPath = $ECK.LogFullName ; $HostScriptPath = $ECK.ScriptFullName}
 
         Try
             {
@@ -47,10 +50,12 @@
                 #Check interactive prereqs
                 If ($Interactive.IsPresent)
                     {
-                        If (-not (Test-path "C:\Windows\System32\serviceUI.exe"))
+                        Foreach ($SrvUItem in @("C:\Windows\System32\serviceUI.exe","$HostScriptPath\ServiceUI.exe")){If (Test-path $SrvUItem){$ServiceUIPath = $SrvUItem ; Break}}
+
+                        If (-not ($ServiceUIPath))
                             {
-                                If ($LogPath) {Write-ECKLog "ServiceUI.exe is not found in C:\Windows\System32, Unable to work in interactive mode" -Path $LogPath -Type 3}
-                                Remove-Variable -Name "Interactive" -Force -Confirm:$false    
+                                Write-ECKLog "ServiceUI.exe is not found, Unable to work in interactive mode" -Type 3
+                                Remove-Variable -Name "Interactive" -Force -Confirm:$false
                             }
                     }
 
@@ -79,7 +84,7 @@
                         $taskToUpdate = Get-ScheduledTask|Where-Object {$_.Principal.UserId -eq $AdminAccountName -or $_.Principal.UserId -eq $AdminAccountSID}
                         Foreach ($item in $taskToUpdate)
                             {
-                                If ($LogPath) {Write-ECKLog "Updating credentials for task $($item.taskname)" -Path $LogPath}
+                                Write-ECKLog "Updating credentials for task $($item.taskname)"
                                 Set-ScheduledTask -TaskName $item.taskname -Taskpath "\*" -User $AdminAccountName -Password $Newuserpassword -ErrorAction SilentlyContinue
                             }
                     }
@@ -110,15 +115,15 @@
                         If([String]::IsNullOrWhiteSpace($Parameters))
                             {
                                 If ($Interactive.IsPresent -and $Context.ToUpper() -eq "SYSTEM")
-                                    {$Task_Action = New-ScheduledTaskAction -Execute "C:\Windows\system32\ServiceUI.exe" -Argument $( "-process:explorer.exe " + $command)}
-                                else 
+                                    {$Task_Action = New-ScheduledTaskAction -Execute $ServiceUIPath -Argument $( "-process:explorer.exe " + $command)}
+                                else
                                     {$Task_Action = New-ScheduledTaskAction -Execute $command}
                             }
                         Else
                             {
                                 If ($Interactive.IsPresent -and $Context.ToUpper() -eq "SYSTEM")
-                                    {$Task_Action = New-ScheduledTaskAction -Execute "C:\Windows\system32\ServiceUI.exe" -Argument $( "-process:explorer.exe " + $command + " " + $Parameters)}
-                                else 
+                                    {$Task_Action = New-ScheduledTaskAction -Execute $ServiceUIPath -Argument $( "-process:explorer.exe " + $command + " " + $Parameters)}
+                                else
                                     {$Task_Action = New-ScheduledTaskAction -Execute $command -Argument $Parameters}
                             }
                     }
@@ -128,28 +133,28 @@
                         $ScriptGuid = new-guid
                         If ($Context.ToUpper() -eq "USER")
                             {
-                                $ExecContext = Get-ECKExecutionContext
-                                $ScriptPath = "$($ExecContext.UserProfile)\AppData\Local\Temp\$ScriptGuid.ps1"
+                                If ([string]::IsNullOrWhiteSpace($ECK.UserProfile)){Get-ECKExecutionContext}
+                                $ScriptPath = "$($ECK.UserProfile)\AppData\Local\Temp\$ScriptGuid.ps1"
                             }
                         Else
                             {$ScriptPath = "$($ENV:TEMP)\$ScriptGuid.ps1"}
                         $ScriptBlock|Out-File -FilePath $ScriptPath -Encoding default
-                        If ($LogPath) {Write-ECKLog "Script Block converted to file $ScriptPath" -Path $LogPath}
+                        Write-ECKLog "Script Block converted to file $ScriptPath"
                     }
 
                 If ($ScriptPath)
                     {
-                        If (($ScriptPath.Substring($ScriptPath.Length-4)).toUpper() -ne ".PS1"){If ($LogPath) {Write-ECKLog "[Error] you must specify a powershell script, Aborting!!" -Path $LogPath}; Return}
+                        If (($ScriptPath.Substring($ScriptPath.Length-4)).toUpper() -ne ".PS1"){Write-ECKLog "[Error] you must specify a powershell script, Aborting!!" ; Return}
                         If ((test-path "C:\Windows\System32\Windowspowershell\v1.0\powershellw.exe") -and (-not ($ForceStandardPSConsole)))
                             {$command = "C:\Windows\System32\Windowspowershell\v1.0\powershellw.exe"}
                         Else
                             {$command = "C:\Windows\System32\Windowspowershell\v1.0\powershell.exe"}
 
                         $Parameters = "-executionpolicy bypass -noprofile -WindowStyle Hidden -file ""$ScriptPath"""
-                        
+
                         If ($Interactive.IsPresent -and $Context.ToUpper() -eq "SYSTEM")
                             {$Task_Action = New-ScheduledTaskAction -Execute "C:\Windows\system32\ServiceUI.exe" -Argument $( "-process:explorer.exe " + $command + " " + $Parameters)}
-                        else 
+                        else
                             {$Task_Action = New-ScheduledTaskAction -Execute $command -Argument $Parameters}
                     }
 
@@ -166,9 +171,9 @@
                         $PreviousTaskName = $($TaskNamePrefix + "_" + $TaskName + "_" + "*-*-*-*-*")
                     }
 
-                If ($LogPath) {Write-ECKLog "Created Task name: $TaskFullName" -Path $LogPath}
-                If ($LogPath) {Write-ECKLog "Command to run is: $command $Parameters" -Path $LogPath}
-
+                Write-ECKLog "Created Task name: $TaskFullName"
+                Write-ECKLog "Command to run is: $command $Parameters"
+                
                 #Cleanup task with the same Name
                 Get-ScheduledTask -TaskName $PreviousTaskName -ErrorAction SilentlyContinue | Unregister-ScheduledTask -Confirm:$false -ErrorAction SilentlyContinue
 
@@ -202,22 +207,22 @@
                         try
                             {
                                 Get-ScheduledTask $TaskFullName -ErrorAction Stop
-                                If ($LogPath) {Write-ECKLog "Task $TaskFullName now launched in $context context !" -Path $LogPath}
+                                Write-ECKLog "Task $TaskFullName now launched in $context context !"
                             }
-                        Catch {If ($LogPath) {Write-ECKLog "[ERROR] Unable to Launch Task $TaskFullName in $context context !" -Path $LogPath -Type 3}}
+                        Catch {Write-ECKLog "[ERROR] Unable to Launch Task $TaskFullName in $context context !" -Type 3}
                         If (-Not ($DontAutokilltask)) {Unregister-ScheduledTask -TaskName $TaskFullName -Confirm:$false -ErrorAction SilentlyContinue}
 
                     }
                 Else
-                    {If ($LogPath) {Write-ECKLog "Task $TaskFullName scheduled sucessfully in $context context with a custom planed execution." -Path $LogPath}}
+                    {Write-ECKLog "Task $TaskFullName scheduled sucessfully in $context context with a custom planed execution."}
 
                 Write-Output $TaskFullName
             }
         Catch
             {
-                If ($LogPath) {Write-ECKLog   $_.Exception.Message.ToString() -Type 3 -Path $LogPath}
-                If ($LogPath) {Write-ECKLog   $_.InvocationInfo.PositionMessage.ToString() -Type 3 -Path $LogPath}
-                If ($LogPath) {Write-ECKLog "[Error], Unable to schedule task $taskName, Aborting !!!" -Type 3 -Path $LogPath}
+                Write-ECKLog   $_.Exception.Message.ToString() -Type 3
+                Write-ECKLog   $_.InvocationInfo.PositionMessage.ToString() -Type 3
+                Write-ECKLog "[Error], Unable to schedule task $taskName, Aborting !!!" -Type 3
                 if ($Context.ToUpper() -eq "ADMIN"){Get-LocalUser $AdminAccountName -ErrorAction SilentlyContinue|Remove-LocalUser -Confirm:$false -ErrorAction SilentlyContinue}
                 Write-Output "#ERROR"
             }

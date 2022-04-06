@@ -1,9 +1,11 @@
 ﻿Function Invoke-ECKRebootToastNotification
     {
+        # Version 2.0 - 05/04/2022 - fixed a lot of bugs
+
         Param
             (
-                [Parameter(Mandatory = $true, Position=0)]
-                [String]$HostScriptPath,
+                [Parameter(Mandatory = $false)]
+                [String]$HostScriptPath = $eck.ScriptFullName,
                 [Parameter(Mandatory = $false)]
                 [String]$SmallLogo, #Image Logo must be PNG and can be submitted as path or Base64
                 [Parameter(Mandatory = $false)]
@@ -23,11 +25,17 @@
                 [Parameter(Mandatory = $false)]
                 [String]$ToastMessage2 = "",
                 [Parameter(Mandatory = $false)]
-                [HashTable]$Buttons
+                [HashTable]$Buttons,
+                [Parameter(Mandatory = $false)]
+                [Int]$RepeatInterval = 30, #Default interval in minutes before user is prompted again
+                [Parameter(Mandatory = $false)]
+                [Int]$TimeLimit = 1440 # When this time limit is reached (in minutes), the user is forced to reboot                
             )
+
         # Set Task names
-        $OldTaskName = [char]34 + "*_RebootToast" + $(split-path $HostScriptPath -Leaf).Replace("-","").replace(".ps1","").replace(" ","") +"_*-*-*-*-*" + [char]34
-        $TaskName = "RebootToast" + $(split-path $HostScriptPath -Leaf).Replace("-","").replace(".ps1","").replace(" ","")
+        $TaskName = "RebootToast"
+        $OldTaskName = "*_" + $TaskName + $(split-path $HostScriptPath -Leaf).Replace("-","").replace(".ps1","").replace(" ","") + "_*-*-*-*-*"
+
 
         # Set Action Folder
         $ActionFld = "C:\ProgramData\RebootToastUI"
@@ -36,10 +44,10 @@
         # Set Buttons
         If (-not $Buttons)
             {
-                [HashTable]$Buttons = @{'Reboot Now' = @('rebootnow','protocol',"$ActionFld\Button1.ps1") ; 'Snooze (30 Mins)' = @('dismiss','system','') ; 'Button3' = @('','','')}
+                [HashTable]$Buttons = @{'Reboot Now' = @('rebootnow','protocol',"$ActionFld\Button1.ps1") ; "Snooze ($RepeatInterval Mins)" = @('dismiss','system','') ; 'Button3' = @('','','')}
                 $script_Button1 = @"
                     Get-ScheduledTask -TaskName $OldTaskName -ErrorAction SilentlyContinue|Unregister-ScheduledTask -Confirm:`$false -ErrorAction SilentlyContinue
-                    Restart-Computer -Confirm:`$false -Force
+                    shutdown /g /t 240
 "@
                 $script_Button1|Out-File -FilePath "$ActionFld\Button1.ps1" -Encoding default
             }
@@ -100,6 +108,10 @@
         `$LogoImagePath = "$LogoImagePath"
         `$ImagePath = "$ImagePath"
         `$ToastScenario = "$ToastScenario"
+        `$RepeatInterval = $RepeatInterval
+        `$TimeLimit = $TimeLimit
+        `$OldTaskName = "$OldTaskName"
+        `$TaskName = "$TaskName"       
         `$Button3 = @('$($Buttons.GetEnumerator().Name[0])','$($Buttons[$Buttons.GetEnumerator().name[0]][0])','$($Buttons[$Buttons.GetEnumerator().name[0]][1])')
         `$Button2 = @('$($Buttons.GetEnumerator().Name[1])','$($Buttons[$Buttons.GetEnumerator().name[1]][0])','$($Buttons[$Buttons.GetEnumerator().name[1]][1])')
         `$Button1 = @('$($Buttons.GetEnumerator().Name[2])','$($Buttons[$Buttons.GetEnumerator().name[2]][0])','$($Buttons[$Buttons.GetEnumerator().name[2]][1])')
@@ -107,13 +119,38 @@
 
         $script_Notif = {
 
-                # Check for required entries in registry for when using Powershell as application for the toast
+                # Check for required entries in registry when using Powershell as application for the toast
                 $App = '{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\powershell.exe'
                 $RegPath = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Notifications\Settings"
                 if (-NOT(Test-Path -Path "$RegPath\$App")) {New-Item -Path "$RegPath\$App" -Force|Out-Null}
                 New-ItemProperty -Path "$RegPath\$App" -Name "ShowInActionCenter" -Value 1 -PropertyType "DWORD" -Force|Out-Null
 
-                #Rebuild Buttons
+                # Checking  if reboot already occured
+                $IsRebooted = (Get-ItemProperty "HKCU:\SOFTWARE\ECK\RebootToastNotification" -name 'IsRebooted'-ErrorAction SilentlyContinue).IsRebooted
+                If (-not([String]::IsNullOrWhiteSpace($IsRebooted)) -and $IsRebooted.toUpper() -eq "TRUE")
+                    {
+                        Get-ScheduledTask -TaskName $OldTaskName -ErrorAction SilentlyContinue|Unregister-ScheduledTask -Confirm:$false -ErrorAction SilentlyContinue
+                        Remove-Item "HKCU:\SOFTWARE\ECK\RebootToastNotification" -Force -ErrorAction SilentlyContinue -Confirm:$false
+                        Exit
+                    }
+
+                # Checking if time limit is exided
+                [Datetime]$StartTime = (Get-ItemProperty "HKCU:\SOFTWARE\ECK\RebootToastNotification" -name 'StartTime'-ErrorAction SilentlyContinue).StartTime
+                If (-not([String]::IsNullOrWhiteSpace($StartTime)))
+                    {
+                        If ($Starttime.addMinutes($TimeLimit) -lt $(Get-date))
+                            {
+                                Get-ScheduledTask -TaskName $OldTaskName -ErrorAction SilentlyContinue|Unregister-ScheduledTask -Confirm:$false -ErrorAction SilentlyContinue
+                                Remove-Item "HKCU:\SOFTWARE\ECK\RebootToastNotification" -Force -ErrorAction SilentlyContinue -Confirm:$false                            
+                                shutdown /g /t 240
+                                Exit
+                            }
+                    }
+
+                $ToastMessage3 = "A Mandatory reboot is planned at $($Starttime.addMinutes($TimeLimit))"
+                If ([String]::IsNullOrWhiteSpace($ToastMessage2)){$ToastMessage2 = $ToastMessage3} Else {$ToastMessage2 = "`r`n`r`n$ToastMessage2`r`n`r`n$ToastMessage3`r`n`r`n" }     
+
+                # Rebuild Buttons
                 $SetButtons = $False
                 $Buttons = "<actions>`r`n"
                 If ($Button1[1] -ne ''){$Buttons = $Buttons + "                        <action arguments = '$($Button1[1]):' content = '$($Button1[0])' activationType='$($Button1[2])' />`r`n";$SetButtons = $True}
@@ -122,7 +159,7 @@
                 If ($SetButtons -eq $True){$Buttons = $Buttons + "                    </actions>"}Else{$Buttons = ''}
                 $Buttons = $Buttons.replace('dismiss:','dismiss')
 
-                #Rebuild Images
+                # Rebuild Images
                 If (-not ([string]::IsNullOrWhiteSpace($ImagePath))){$Image = "<image placement='$ImagePos' src='$ImagePath'/>"} Else {$Image = ''}
                 If (-not ([string]::IsNullOrWhiteSpace($LogoImagePath))){$LogoImage = "<image placement='appLogoOverride' hint-crop='circle' src='$LogoImagePath'/>"} Else {$LogoImage = ''}
 
@@ -159,8 +196,16 @@
 
         $script_Notif = [ScriptBlock]::Create($Script_Variables.ToString() + $script_Notif.ToString())
 
+        # Set Registry
+        Get-ECKExecutionContext
+        New-item -Path "$($ECK.CurrentUserRegistry)\SOFTWARE\ECK\RebootToastNotification" -Force|Out-Null
+        New-ItemProperty -Path "$($ECK.CurrentUserRegistry)\SOFTWARE\ECK\RebootToastNotification" -Name "StartTime" -Value $(Get-date) -Force|Out-Null
+        New-ItemProperty -Path "$($ECK.CurrentUserRegistry)\SOFTWARE\ECK\RebootToastNotification" -Name "IsRebooted" -Value "FALSE" -Force|Out-Null
+        If (-not(test-path "$($ECK.CurrentUserRegistry)\Software\Microsoft\Windows\CurrentVersion\RunOnce")){New-item -Path "$($ECK.CurrentUserRegistry)\Software\Microsoft\Windows\CurrentVersion\RunOnce" -Force|Out-Null}
+        New-ItemProperty -Path "$($ECK.CurrentUserRegistry)\Software\Microsoft\Windows\CurrentVersion\RunOnce" -Name "Run" -Value "reg.exe add HKCU:\SOFTWARE\ECK\RebootToastNotification /v ""IsRebooted"" /d ""TRUE"" /f" -Force|Out-Null
+
         # Schedule Task
         Get-ScheduledTask -TaskName $OldTaskName -ErrorAction SilentlyContinue|Unregister-ScheduledTask -Confirm:$false -ErrorAction SilentlyContinue
-        $trigger = New-ScheduledTaskTrigger -RepetitionInterval $(New-TimeSpan -Minutes 30) -At $((Get-Date).AddSeconds(5).ToString('s')) -Once
-        Invoke-ECKScheduledTask -TaskName $TaskName -ScriptBlock $script_Notif -Context user -triggerObject $Trigger -DontAutokilltask -AllowUsersFullControl -HostScriptPath $HostScriptPath
+        $trigger = New-ScheduledTaskTrigger -RepetitionInterval $(New-TimeSpan -Minutes $RepeatInterval) -At $((Get-Date).AddSeconds(5).ToString('s')) -Once
+        Invoke-ECKScheduledTask -TaskName $TaskName -ScriptBlock $script_Notif -Context user -triggerObject $Trigger -DontAutokilltask -AllowUsersFullControl -now
     }
