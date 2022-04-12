@@ -29,7 +29,7 @@
                 [Parameter(Mandatory = $false)]
                 [Int]$RepeatInterval = 30, #Default interval in minutes before user is prompted again
                 [Parameter(Mandatory = $false)]
-                [Int]$TimeLimit = 1440 # When this time limit is reached (in minutes), the user is forced to reboot                
+                [Int]$TimeLimit = 1440 # When this time limit is reached (in minutes), the user is forced to reboot
             )
 
         # Set Task names
@@ -111,7 +111,7 @@
         `$RepeatInterval = $RepeatInterval
         `$TimeLimit = $TimeLimit
         `$OldTaskName = "$OldTaskName"
-        `$TaskName = "$TaskName"       
+        `$TaskName = "$TaskName"
         `$Button3 = @('$($Buttons.GetEnumerator().Name[0])','$($Buttons[$Buttons.GetEnumerator().name[0]][0])','$($Buttons[$Buttons.GetEnumerator().name[0]][1])')
         `$Button2 = @('$($Buttons.GetEnumerator().Name[1])','$($Buttons[$Buttons.GetEnumerator().name[1]][0])','$($Buttons[$Buttons.GetEnumerator().name[1]][1])')
         `$Button1 = @('$($Buttons.GetEnumerator().Name[2])','$($Buttons[$Buttons.GetEnumerator().name[2]][0])','$($Buttons[$Buttons.GetEnumerator().name[2]][1])')
@@ -141,14 +141,14 @@
                         If ($Starttime.addMinutes($TimeLimit) -lt $(Get-date))
                             {
                                 Get-ScheduledTask -TaskName $OldTaskName -ErrorAction SilentlyContinue|Unregister-ScheduledTask -Confirm:$false -ErrorAction SilentlyContinue
-                                Remove-Item "HKCU:\SOFTWARE\ECK\RebootToastNotification" -Force -ErrorAction SilentlyContinue -Confirm:$false                            
+                                Remove-Item "HKCU:\SOFTWARE\ECK\RebootToastNotification" -Force -ErrorAction SilentlyContinue -Confirm:$false
                                 shutdown /g /t 240
                                 Exit
                             }
                     }
 
                 $ToastMessage3 = "A Mandatory reboot is planned at $($Starttime.addMinutes($TimeLimit))"
-                If ([String]::IsNullOrWhiteSpace($ToastMessage2)){$ToastMessage2 = $ToastMessage3} Else {$ToastMessage2 = "`r`n`r`n$ToastMessage2`r`n`r`n$ToastMessage3`r`n`r`n" }     
+                If ([String]::IsNullOrWhiteSpace($ToastMessage2)){$ToastMessage2 = $ToastMessage3} Else {$ToastMessage2 = "`r`n`r`n$ToastMessage2`r`n`r`n$ToastMessage3`r`n`r`n" }
 
                 # Rebuild Buttons
                 $SetButtons = $False

@@ -4,7 +4,7 @@
         # Version 1.3 - 15/02/2020 - added a try/Catch
         # Version 1.4 - 21/03/2020 - added new detection methode, retrive user UPN, detect Trusted installer context
         # Version 1.5 - 01/04/2020 - added Current logged on user registry key, Fixed bugs
-        # Version 1.6 - 04/04/2022 - Added support For Set-ECKEnvironment.   
+        # Version 1.6 - 04/04/2022 - Added support For Set-ECKEnvironment.
 
         [CmdletBinding()]
         [Alias('Get-ExecutionContext')]
@@ -12,7 +12,7 @@
         Param
             (
                 [Parameter(Mandatory = $false)]
-                [String]$LogPath = $ECK.LogFullName 
+                [String]$LogPath = $ECK.LogFullName
             )
 
         If ([string]::IsNullOrWhiteSpace($LogPath)){Set-ECKEnvironment ; $LogPath = $ECK.LogFullName}
@@ -77,9 +77,9 @@
         Write-ECKLog "User profile is: $CurrentUserProfile" -Path $LogPath
         $ECK|Add-Member -MemberType NoteProperty -Name 'UserProfile' -Value $CurrentUserProfile
         Write-ECKLog "User UPN is: $CurrentUserUPN" -Path $LogPath
-        $ECK|Add-Member -MemberType NoteProperty -Name 'UserUPN' -Value $CurrentUserUPN      
-        Write-ECKLog "User Registry Profile is: $CurrentUserReg" -Path $LogPath        
-        $ECK|Add-Member -MemberType NoteProperty -Name 'CurrentUserRegistry' -Value $CurrentUserReg 
+        $ECK|Add-Member -MemberType NoteProperty -Name 'UserUPN' -Value $CurrentUserUPN
+        Write-ECKLog "User Registry Profile is: $CurrentUserReg" -Path $LogPath
+        $ECK|Add-Member -MemberType NoteProperty -Name 'CurrentUserRegistry' -Value $CurrentUserReg
 
         if (-NOT ([Security.Principal.WindowsIdentity]::GetCurrent().Groups -contains 'S-1-5-32-544')) {$IsAdmin = $False} else {$IsAdmin = $True}
         Write-ECKLog "User $CurrentUser is Admin: $IsAdmin" -Path $LogPath
@@ -91,7 +91,7 @@
 
         If (([System.Security.Principal.WindowsIdentity]::GetCurrent().groups.value -contains "S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464") -eq $true){$RunAsTI = $True} else {$RunAsTI = $False}
         Write-ECKLog "Currently running in Trusted Installer context: $RunAsTI" -Path $LogPath
-        $ECK|Add-Member -MemberType NoteProperty -Name 'RunAsTrustedInstaller' -Value $RunAsTI       
+        $ECK|Add-Member -MemberType NoteProperty -Name 'RunAsTrustedInstaller' -Value $RunAsTI
 
         IF ($IsAdmin -eq $true -or $RunAsSystem -eq $true) {$KeyRoot = "HKLM:"} Else {$KeyRoot = "HKCU:"}
         Write-ECKLog "Allowed Registry key : $KeyRoot" -Path $LogPath
