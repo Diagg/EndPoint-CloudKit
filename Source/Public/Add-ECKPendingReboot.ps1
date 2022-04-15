@@ -1,4 +1,4 @@
-Function Set-ECKPendingReboot
+﻿Function Add-ECKPendingReboot
     {
         # Version 1.0 - 13/04/2022 - Initial release, set a registry key to notice that a reboot is requierd, and set a runonce key to remove it after reboot
 
@@ -10,9 +10,9 @@ Function Set-ECKPendingReboot
         If (-not(test-path "HKLM:\Software\Microsoft\Windows\CurrentVersion\RunOnce")){New-item -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\RunOnce" -Force|Out-Null}
         New-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\RunOnce" -Name "Run" -Value "reg.exe delete HKLM:\SOFTWARE\ECK\PendingReboot /v ""RebootRequired"" /f" -Force|Out-Null
 
-        ##== Set $ECK 
+        ##== Set $ECK
         If ([string]::IsNullOrWhiteSpace($ECK.PendingReboot))
             {$ECK|Add-Member -MemberType NoteProperty -Name 'PendingReboot' -Value $true}
-        else 
+        else
             {$ECK.PendingReboot = $true}
     }

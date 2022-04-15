@@ -4,7 +4,7 @@
         # Version 1.3 - 15/02/2020 - added a try/Catch
         # Version 1.4 - 21/03/2020 - added new detection methode, retrive user UPN, detect Trusted installer context
         # Version 1.5 - 01/04/2020 - added Current logged on user registry key, Fixed bugs
-        # Version 1.6 - 04/04/2022 - Added support For Set-ECKEnvironment.
+        # Version 1.6 - 04/04/2022 - Added support For New-ECKEnvironment.
 
         [CmdletBinding()]
         [Alias('Get-ExecutionContext')]
@@ -15,7 +15,7 @@
                 [String]$LogPath = $ECK.LogFullName
             )
 
-        If ([string]::IsNullOrWhiteSpace($LogPath)){Set-ECKEnvironment ; $LogPath = $ECK.LogFullName}
+        If ([string]::IsNullOrWhiteSpace($LogPath)){New-ECKEnvironment ; $LogPath = $ECK.LogFullName}
 
         Try
             {

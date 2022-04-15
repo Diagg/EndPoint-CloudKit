@@ -4,7 +4,7 @@
         # Version 1.4.1 - 21/02/2022 - removed $Script scoped variable to work with Module
         # Version 1.5   - 22/02/2022 - reworked logic
         # Version 1.6   - 25/02/2022 - Bug fix: you could not write only event
-        # Version 1.7   - 05/04/2022 - Added support for Set-ECKEnvironment
+        # Version 1.7   - 05/04/2022 - Added support for New-ECKEnvironment
 
         [CmdletBinding()]
         [Alias('Write-Log')]
@@ -24,7 +24,7 @@
                 [Int]$Type = 1
             )
 
-        If (-Not $path -and -not $EventLogOnly){Set-ECKEnvironment ; $Path = $ECK.LogFullName}
+        If (-Not $path -and -not $EventLogOnly){New-ECKEnvironment ; $Path = $ECK.LogFullName}
 
         $oDate = $(Get-Date -Format "M-d-yyyy")
         $oHour = $(Get-Date -Format "HH:mm:ss")

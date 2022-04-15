@@ -1,17 +1,16 @@
-﻿Function Set-ECKEnvironment
+﻿Function New-ECKEnvironment
     {
         # Version 1.0 - 04/04/2022 - Set Script name and logfile for in and outside the module
         # Version 1.1 - 08/04/2022 - Script and Log path are now logged
         # Version 1.2 - 12/04/2022 - bug fix
+        # Version 1.3 - 14/04/2022 - Added pending reboot state to Full Gather evaluation
 
-        [CmdletBinding(SupportsShouldProcess, ConfirmImpact='none')]
         Param (
                 [string]$LogPath = "C:\Windows\Logs\ECK",
                 [switch]$FullGather
             )
 
-        if ($PSCmdlet.ShouldProcess("ShouldProcess?")){Remove-Variable ECK -Scope global -ErrorAction SilentlyContinue -force}
-
+        Remove-Variable ECK -Scope global -ErrorAction SilentlyContinue -force
         $MyInvoc = $global:PSCommandPath
         If ([string]::IsNullOrWhiteSpace($MyInvoc)){$MyInvoc = "$($env:temp)\TempScript-$((new-guid).guid.split('-')[0]).ps1"}
 
@@ -36,5 +35,6 @@
                 Get-ECKExecutionContext
                 $ECK|Add-Member -MemberType NoteProperty -Name 'OsBuild' -Value $((Get-ItemProperty 'HKLM:SOFTWARE\Microsoft\Windows NT\CurrentVersion').CurrentBuild)
                 $ECK|Add-Member -MemberType NoteProperty -Name 'OsFriendlyName' -Value $(Get-ECKOsFriendlyName)
+                Get-ECKPendingReboot|Out-Null
             }
     }

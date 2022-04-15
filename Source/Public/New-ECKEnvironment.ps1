@@ -1,4 +1,4 @@
-﻿Function Set-ECKEnvironment
+﻿Function New-ECKEnvironment
     {
         # Version 1.0 - 04/04/2022 - Set Script name and logfile for in and outside the module
         # Version 1.1 - 08/04/2022 - Script and Log path are now logged

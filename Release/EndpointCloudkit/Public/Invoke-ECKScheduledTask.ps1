@@ -43,7 +43,7 @@
             [String]$LogPath = $ECK.LogFullName
         )
 
-        If ([string]::IsNullOrWhiteSpace($LogPath)){Set-ECKEnvironment ; $LogPath = $ECK.LogFullName ; $HostScriptPath = $ECK.ScriptFullName}
+        If ([string]::IsNullOrWhiteSpace($LogPath)){New-ECKEnvironment ; $LogPath = $ECK.LogFullName ; $HostScriptPath = $ECK.ScriptFullName}
 
         Try
             {

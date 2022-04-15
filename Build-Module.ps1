@@ -6,7 +6,7 @@ $apiKey = ''
 
 
 $Params = @{
-    "ModuleVersion"         = '0.0.11.0'
+    "ModuleVersion"         = '0.0.12.1'
     "RootModule" = 'EndpointCloudkit.psm1'
     "GUID"                  = 'd1488437-3d1f-439e-b188-30e208cbd9df'
     "Path" 				    = "$($Script:CurrentScriptPath)\Source\EndpointCloudkit.psd1"
@@ -14,7 +14,7 @@ $Params = @{
     "CompanyName" 			= 'OSD-Couture.com'
     "Copyright"             = '(c) 2022 Diagg/OSD-Couture.com. All rights reserved.'
     "CompatiblePSEditions" 	= @('Desktop')
-    "FunctionsToExport" 	= @('Get-ECKExecutionContext','Get-ECKOsFriendlyName','Get-ECKPendingReboot','Invoke-ECKContinueOnNextReboot','Invoke-ECKRebootToastNotification','Invoke-ECKScheduledTask','Write-ECKLog','Set-ECKEnvironment')
+    "FunctionsToExport" 	= @('Get-ECKExecutionContext','Get-ECKOsFriendlyName','Get-ECKPendingReboot','Invoke-ECKContinueOnNextReboot','Invoke-ECKRebootToastNotification','Invoke-ECKScheduledTask','Write-ECKLog','Set-ECKEnvironment','Get-ECKGithubContent','Initialize-ECKPrereq','Set-ECKPendingReboot')
     "CmdletsToExport" 		= @()
     "VariablesToExport" 	= ''
     "AliasesToExport" 		= @()
@@ -25,13 +25,15 @@ $Params = @{
     "Description"           = @'
 Endpoint Cloud kit Module (ECK), a set of cmdlet to help building scripts or application deployed by your MDM (Intune/Workspace One...)
 
-- Run Powershell script or executable in User/system/admin context
+- Run Powershell script or executable in User/system/admin/tusted installer/System Interactive context
 - Restart your script after reboot
 - Logging function
 - Configurable reboot toast notifications
-- Execution context (Admin/system/user) detection
+- Execution context (Admin/system/user/TI) detection
 - Pending reboot detection
 - Windows Build converter to friendly name (like 21H2)
+- Download from Git/Github on public/private repo
+- Auto update ECK module
 
 '@
     "ReleaseNotes"          = @'
@@ -46,6 +48,8 @@ Endpoint Cloud kit Module (ECK), a set of cmdlet to help building scripts or app
 0.0.9.0 2022/03/30 * Beta version - Added back 'interactive' parameter in Invoke-ECKScheduledTask with support ServiceUI.exe
 0.0.10.0 2022/04/04 * Beta version - Added function Set-ECKEnvironment to Gather local informations In a script scoped objet variable
 0.0.11.0 2022/04/12 * Beta version - Invoke-ECKScheduledTask can now monitor running scheduled task
+0.0.11.1 2022/04/12 * Beta version - Fixed bugs in Set-ECKEnvironment
+0.0.12.0 2022/04/12 * Beta version - Added Functions Get-ECKGithubContent, Initialize-ECKPrereq, Set-ECKPendingReboot
 '@
 }
 
