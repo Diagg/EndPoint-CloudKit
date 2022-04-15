@@ -5,6 +5,9 @@
         # Version 3.6 - 21/03/2022 - Task can now run as trusted Installer
         # Version 3.7 - 30/03/2022 - Leverage ServiceUI.exe to run task interactivelly, added back parameter 'Interactive'
         # Version 3.8 - 05/04/2022 - ServiceUI is seeked in different location, thanks to Bertrand J.
+        # Version 3.9 - 07/04/2022 - Added WaitFinised switch to allow tracking of the running task. also cast out return code.
+        # Version 3.10 - 12/04/2022 - Added log warning if interactive commande contains spaces
+
 
         [CmdletBinding()]
         param (
@@ -30,7 +33,9 @@
             [switch]$AtStartup, #Machine
             [switch]$AtLogon, #User
             [switch]$DontAutokilltask,
-            [int]$DefaultTaskExpiration = 120,
+            [Switch]$WaitFinished, # wait for planed task to finish, and return exit code, works only with 'now' switch
+            [Int]$WaitFinshedTimeout = 3600, # Default time out (in second) before stopping to wait after running task
+            [int]$DefaultTaskExpiration = 120, # Default wait time before removing task after execution (expressed in second)
             [Switch]$NormalTaskName, #TaskName created without prefix and random GUID
             [Switch]$AllowUsersFullControl, #allow user to delete his own task
             [Switch]$ForceStandardPSConsole, #force use of Powershell.exe instead of Powershellw.exe
@@ -101,7 +106,7 @@
                 Else
                     {$Task_Trigger = New-ScheduledTaskTrigger -Once -At $Task_TimeToRun}
 
-                If ($DontAutokilltask)
+                If ($DontAutokilltask.IsPresent -or $WaitFinished.IsPresent)
                     {$Task_Settings = New-ScheduledTaskSettingsSet -Compatibility Win8 -AllowStartIfOnBatteries -StartWhenAvailable}
                 Else
                     {
@@ -115,7 +120,10 @@
                         If([String]::IsNullOrWhiteSpace($Parameters))
                             {
                                 If ($Interactive.IsPresent -and $Context.ToUpper() -eq "SYSTEM")
-                                    {$Task_Action = New-ScheduledTaskAction -Execute $ServiceUIPath -Argument $( "-process:explorer.exe " + $command)}
+                                    {
+                                        $Task_Action = New-ScheduledTaskAction -Execute $ServiceUIPath -Argument $( "-process:explorer.exe " + $command)
+                                        If ($command.split(" ").count -gt 0){Write-ECKlog "[WARNING] the path to your Powershell script ($command) contains whitespace that ServiceUI does not support, your command won't run !" -Type 1}
+                                    }
                                 else
                                     {$Task_Action = New-ScheduledTaskAction -Execute $command}
                             }
@@ -153,7 +161,10 @@
                         $Parameters = "-executionpolicy bypass -noprofile -WindowStyle Hidden -file ""$ScriptPath"""
 
                         If ($Interactive.IsPresent -and $Context.ToUpper() -eq "SYSTEM")
-                            {$Task_Action = New-ScheduledTaskAction -Execute "C:\Windows\system32\ServiceUI.exe" -Argument $( "-process:explorer.exe " + $command + " " + $Parameters)}
+                            {
+                                $Task_Action = New-ScheduledTaskAction -Execute "C:\Windows\system32\ServiceUI.exe" -Argument $( "-process:explorer.exe " + $command + " " + $Parameters)
+                                If ($Parameters.split(" ").count -gt 0){Write-ECKlog "[WARNING] the path to your Powershell script ($Parameters) contains whitespace that ServiceUI does not support, your command won't run !" -Type 1}
+                            }
                         else
                             {$Task_Action = New-ScheduledTaskAction -Execute $command -Argument $Parameters}
                     }
@@ -206,8 +217,19 @@
                         While((Get-ScheduledTask $TaskFullName -ErrorAction SilentlyContinue).State -ne 'Running' -and $count -le 8){Start-Sleep -Seconds 1 ; $Count +=1 }
                         try
                             {
-                                Get-ScheduledTask $TaskFullName -ErrorAction Stop
+                                Get-ScheduledTask $TaskFullName -ErrorAction Stop|Out-Null
                                 Write-ECKLog "Task $TaskFullName now launched in $context context !"
+
+                                If ($WaitFinished.IsPresent)
+                                    {
+                                        While((Get-ScheduledTask $TaskFullName -ErrorAction SilentlyContinue).State -ne 'Ready' -and $count -le [int]($WaitFinshedTimeout/2))
+                                            {
+                                                Start-Sleep -Seconds 2 ; $Count +=1
+                                                If  (($Count/60) -is [Int]){Write-ECKLog "Task $TaskFullName still running ! (Elapsed time $([math]::Round($Count/60,2)))"}
+                                            }
+
+                                        [int]$Runingtask = (Get-ScheduledTaskInfo -TaskName $TaskFullName).LastTaskResult
+                                    }
                             }
                         Catch {Write-ECKLog "[ERROR] Unable to Launch Task $TaskFullName in $context context !" -Type 3}
                         If (-Not ($DontAutokilltask)) {Unregister-ScheduledTask -TaskName $TaskFullName -Confirm:$false -ErrorAction SilentlyContinue}
@@ -216,7 +238,7 @@
                 Else
                     {Write-ECKLog "Task $TaskFullName scheduled sucessfully in $context context with a custom planed execution."}
 
-                Write-Output $TaskFullName
+                If ($Runingtask){$Runingtask} Else {Write-Output $TaskFullName}
             }
         Catch
             {

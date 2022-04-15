@@ -34,7 +34,7 @@
         # Write the line to the log file
         $Content = "$oDate $oHour, $($MessageType[$type]) $Tab $($Message -replace "`r`n", ", ")"
         $Content| Out-file -FilePath $Path -Encoding UTF8 -Append -ErrorAction SilentlyContinue
-        If ($OutputToConsole -eq $true){Write-output $Content}
+        If ($OutputToConsole -eq $true){Write-host $Content}
 
 
         If ($EventLogID)

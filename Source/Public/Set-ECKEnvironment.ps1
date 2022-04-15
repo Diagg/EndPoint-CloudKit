@@ -2,6 +2,8 @@
     {
         # Version 1.0 - 04/04/2022 - Set Script name and logfile for in and outside the module
         # Version 1.1 - 08/04/2022 - Script and Log path are now logged
+        # Version 1.2 - 12/04/2022 - bug fix
+        # Version 1.3 - 14/04/2022 - Added pending reboot state to Full Gather evaluation
 
         Param (
                 [string]$LogPath = "C:\Windows\Logs\ECK",
@@ -24,14 +26,15 @@
                 LogPath = $(split-path $LogPath)
                 LogFullName = $LogPath
             }
-        
-        Write-ECKlog "Script Path is: $(ECK.ScriptFullName)"
-        Write-ECKlog "Log Path is: $(ECK.LogFullName)"
+
+        Write-ECKlog "Script Path is: $($ECK.ScriptFullName)"
+        Write-ECKlog "Log Path is: $($ECK.LogFullName)"
 
         If ($FullGather.IsPresent)
             {
                 Get-ECKExecutionContext
                 $ECK|Add-Member -MemberType NoteProperty -Name 'OsBuild' -Value $((Get-ItemProperty 'HKLM:SOFTWARE\Microsoft\Windows NT\CurrentVersion').CurrentBuild)
                 $ECK|Add-Member -MemberType NoteProperty -Name 'OsFriendlyName' -Value $(Get-ECKOsFriendlyName)
+                Get-ECKPendingReboot|Out-Null
             }
     }

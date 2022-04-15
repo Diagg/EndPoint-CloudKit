@@ -1,5 +1,8 @@
 ﻿Function Get-ECKPendingReboot
     {
+        # Version 1.1 - 13/04/2022 - Added support for Endpoint Cloud Kit own pending reboot
+        # Version 1.2 - 13/04/2022 - Pending Reboot state is now included in $ECK environment variable  
+        
         Param([switch]$SKipFileRename)
 
         [bool]$PendingReboot = $false
@@ -12,6 +15,7 @@
                 "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager" = "PendingFileRenameOperations;PendingFileRenameOperations2"
                 "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce" = "DVDRebootSignal"
                 "HKLM:\SYSTEM\CurrentControlSet\Services\Netlogon" = "JoinDomain;AvoidSpnSet"
+                "HKLM:\SOFTWARE\ECK\PendingReboot" = "RebootRequired"
             }
 
         ForEach ($Hash in $PendingTable.keys)
@@ -28,6 +32,12 @@
                             }
                     }
             }
+
+        ##== Set $ECK 
+        If ([string]::IsNullOrWhiteSpace($ECK.PendingReboot))
+            {$ECK|Add-Member -MemberType NoteProperty -Name 'PendingReboot' -Value $PendingReboot}
+        else 
+            {$ECK.PendingReboot = $PendingReboot}
 
         Return $PendingReboot
     }

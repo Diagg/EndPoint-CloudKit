@@ -1,13 +1,17 @@
 ﻿Function Set-ECKEnvironment
     {
         # Version 1.0 - 04/04/2022 - Set Script name and logfile for in and outside the module
+        # Version 1.1 - 08/04/2022 - Script and Log path are now logged
+        # Version 1.2 - 12/04/2022 - bug fix
 
+        [CmdletBinding(SupportsShouldProcess, ConfirmImpact='none')]
         Param (
                 [string]$LogPath = "C:\Windows\Logs\ECK",
                 [switch]$FullGather
             )
 
-        Remove-Variable ECK -Scope global -ErrorAction SilentlyContinue -force
+        if ($PSCmdlet.ShouldProcess("ShouldProcess?")){Remove-Variable ECK -Scope global -ErrorAction SilentlyContinue -force}
+
         $MyInvoc = $global:PSCommandPath
         If ([string]::IsNullOrWhiteSpace($MyInvoc)){$MyInvoc = "$($env:temp)\TempScript-$((new-guid).guid.split('-')[0]).ps1"}
 
@@ -15,6 +19,7 @@
         If (-not(Test-path $(split-path $LogPath))){New-Item -Path $(split-path $LogPath) -ItemType Directory -Force -Confirm:$false -ErrorAction SilentlyContinue | Out-Null}
 
         $Global:ECK = [PSCustomObject]@{
+                ModVersion = $(((Get-Module endpointcloudkit|Sort-Object|Select-Object -last 1).version.tostring()))
                 ScriptName = $(split-path $MyInvoc -leaf)
                 ScriptPath = $(split-path $MyInvoc)
                 ScriptFullName =  $MyInvoc
@@ -22,6 +27,9 @@
                 LogPath = $(split-path $LogPath)
                 LogFullName = $LogPath
             }
+
+        Write-ECKlog "Script Path is: $($ECK.ScriptFullName)"
+        Write-ECKlog "Log Path is: $($ECK.LogFullName)"
 
         If ($FullGather.IsPresent)
             {

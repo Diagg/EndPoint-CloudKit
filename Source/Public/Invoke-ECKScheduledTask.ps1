@@ -6,7 +6,7 @@
         # Version 3.7 - 30/03/2022 - Leverage ServiceUI.exe to run task interactivelly, added back parameter 'Interactive'
         # Version 3.8 - 05/04/2022 - ServiceUI is seeked in different location, thanks to Bertrand J.
         # Version 3.9 - 07/04/2022 - Added WaitFinised switch to allow tracking of the running task. also cast out return code.
-        # Version 3.10 - 12/04/2022 - Added log warning if interactive commande contains spaces 
+        # Version 3.10 - 12/04/2022 - Added log warning if interactive commande contains spaces
 
 
         [CmdletBinding()]
@@ -34,7 +34,7 @@
             [switch]$AtLogon, #User
             [switch]$DontAutokilltask,
             [Switch]$WaitFinished, # wait for planed task to finish, and return exit code, works only with 'now' switch
-            [Int]$WaitFinshedTimeout = 3600, # Default time out (in second) before stopping to wait after running task  
+            [Int]$WaitFinshedTimeout = 3600, # Default time out (in second) before stopping to wait after running task
             [int]$DefaultTaskExpiration = 120, # Default wait time before removing task after execution (expressed in second)
             [Switch]$NormalTaskName, #TaskName created without prefix and random GUID
             [Switch]$AllowUsersFullControl, #allow user to delete his own task
@@ -228,7 +228,7 @@
                                                 If  (($Count/60) -is [Int]){Write-ECKLog "Task $TaskFullName still running ! (Elapsed time $([math]::Round($Count/60,2)))"}
                                             }
 
-                                        [int]$Runingtask = (Get-ScheduledTaskInfo -TaskName $TaskFullName).LastTaskResult 
+                                        [int]$Runingtask = (Get-ScheduledTaskInfo -TaskName $TaskFullName).LastTaskResult
                                     }
                             }
                         Catch {Write-ECKLog "[ERROR] Unable to Launch Task $TaskFullName in $context context !" -Type 3}
