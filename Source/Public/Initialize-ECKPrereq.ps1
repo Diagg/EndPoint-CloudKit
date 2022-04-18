@@ -80,8 +80,8 @@
                 If ((Get-PSRepository -Name "PsGallery").InstallationPolicy -ne "Trusted"){Set-PSRepository -Name 'PSGallery' -InstallationPolicy 'Trusted' -SourceLocation 'https://www.powershellgallery.com/api/v2'}
 
                 # Installing Endpoint Cloud Kit
-                $Module += "endpointcloudkit"
-                $Module = $Module[-1..0]
+                If ('endpointcloudkit' -notin $Module){$Module += "endpointcloudkit"}
+                $Module = $Module|Sort-Object -Descending
 
                 # Installing modules
                 Foreach ($mod in $Module)
@@ -89,19 +89,20 @@
                         $ModStatus = Get-ECKNewModuleVersion -modulename $Mod -LogPath $LogPath
                         If ($ModStatus -ne $false)
                             {
-                                $ImportedMod = Get-Module $mod -ListAvailable | Sort-Object Version -Descending  | Select-Object -First 1|Import-module -PassThru
-                                
+                                Remove-module $Mod -force -ErrorAction SilentlyContinue
+                                $ImportedMod = Get-Module $mod -ListAvailable | Sort-Object Version -Descending  | Select-Object -First 1|Import-module -PassThru -Force
+
                                 $Message = "$Mod module installed version: $($ImportedMod.Version.ToString())"
                                 If ($ModECK -eq $true){Write-ECKlog -Message $Message} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
 
-                                If ($Mod -eq 'endpointcloudkit' -and $ModECK -ne $true){New-ECKEnvironment -FullGather -LogPath $LogPath ; $ModECK = $true} 
+                                If ($Mod -eq 'endpointcloudkit'){New-ECKEnvironment -FullGather -LogPath $LogPath ; $ModECK = $true}
                             }
                         Else
                             {
                                 $Message = "[Error] Unable to install Module $Mod, Aborting!!!"
                                 If ($ModECK -eq $true){Write-ECKlog -Message $Message} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
                                 Exit 1
-                            }                    
+                            }
                     }
 
 

@@ -10,9 +10,20 @@
                 [String]$LogPath
             )
 
+        # Check Log Method
+        if(Test-Path function:write-ECKLog){$ModECK = $true} Else {$ModECK = $false}
+
         # Check if we need to update today
         $lastEval = (Get-ItemProperty "HKLM:\SOFTWARE\ECK\DependenciesCheck" -name $ModuleName -ErrorAction SilentlyContinue).$ModuleName
-        If (![String]::IsNullOrWhiteSpace($lastEval)){If ((Get-date -Date $LastEval) -eq ((get-date).date)){return [PSCustomObject]@{NeedUpdate = $False ; ModuleName = $ModuleName}}}
+        If (![String]::IsNullOrWhiteSpace($lastEval))
+            {
+                If ((Get-date -Date $LastEval) -eq ((get-date).date))
+                    {
+                        $Message = "[Warning] Module $ModuleName, was alreqdy downloaded today, to save bandwidth, now new download will occurs until tomorrow !"
+                        If ($ModECK -eq $true){Write-ECKlog -Message $Message -type 2} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
+                        return [PSCustomObject]@{NeedUpdate = $False ; ModuleName = $ModuleName}
+                    }
+            }
 
 
         #getting version of installed module
@@ -33,12 +44,12 @@
                 If (-not ($null -eq $version))
                     {
                         $Message = "[Warning] No internet connection available, continuing with local version $version of $ModuleName"
-                        If ($null -ne $ECK){Write-ECKlog -Message $Message -type 2} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
+                        If ($ModECK -eq $true){Write-ECKlog -Message $Message -type 2} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
                     }
                 Else
                     {
                         $Message = "[ERROR] No internet connection available, unable to load module $ModuleName, Aborting !!!"
-                        If ($null -ne $ECK){Write-ECKlog -Message $Message -type 3} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
+                        If ($ModECK -eq $true){Write-ECKlog -Message $Message -type 3} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
                         Exit 1
                     }
             }
@@ -56,7 +67,7 @@
         if ([version]"$a" -ge [version]"$b")
             {
                 $Message = "Module $ModuleName Local version [$a] is equal or greater than online version [$b], no update requiered"
-                If ($null -ne $ECK){Write-ECKlog -Message $Message} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
+                If ($ModECK -eq $true){Write-ECKlog -Message $Message} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
                 return [PSCustomObject]@{NeedUpdate = $False ; ModuleName = $ModuleName ; LocalVersion = $version ; OnlineVersion = $psgalleryversion}
             }
         else
@@ -64,7 +75,7 @@
                 If ($b -ne "0.0")
                     {
                         $Message =  "Module $ModuleName Local version [$a] is lower than online version [$b], Updating Module !"
-                        If ($null -ne $ECK){Write-ECKlog -Message $Message} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
+                        If ($ModECK -eq $true){Write-ECKlog -Message $Message} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
                         If ($a -eq "0.0")
                             {Install-Module -Name $ModuleName -Force}
                         Else
@@ -79,7 +90,7 @@
                 Else
                     {
                         $message = "[ERROR] Module $ModuleName not found online, unable to download, aborting!"
-                        If ($null -ne $ECK){Write-ECKlog -Message $Message -level 3} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
+                        If ($ModECK -eq $true){Write-ECKlog -Message $Message -level 3} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
                         return $false
                     }
             }
