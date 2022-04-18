@@ -89,17 +89,19 @@
                         $ModStatus = Get-ECKNewModuleVersion -modulename $Mod -LogPath $LogPath
                         If ($ModStatus -ne $false)
                             {
-                                If ($ModStatus.NeedUpdate -eq $true)
-                                    {
-                                        Get-Module $mod -ListAvailable | Sort-Object Version -Descending  | Select-Object -First 1|Import-module
-                                        Write-ECKlog -Message "$Mod module installed version: $($ModStatus.OnlineVersion)"
-                                    }
-                                else
-                                    {Write-ECKlog -Message "$Mod module installed version: $($ModStatus.LocalVersion)" }
-                                If ($Mod -eq 'endpointcloudkit' -and $ModECK -ne $true){New-ECKEnvironment -FullGather -LogPath $LogPath ; $ModECK = $true}
+                                $ImportedMod = Get-Module $mod -ListAvailable | Sort-Object Version -Descending  | Select-Object -First 1|Import-module -PassThru
+                                
+                                $Message = "$Mod module installed version: $($ImportedMod.Version.ToString())"
+                                If ($ModECK -eq $true){Write-ECKlog -Message $Message} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
+
+                                If ($Mod -eq 'endpointcloudkit' -and $ModECK -ne $true){New-ECKEnvironment -FullGather -LogPath $LogPath ; $ModECK = $true} 
                             }
                         Else
-                            {Write-ECKlog -Message "[Error] Unable to install Module $Mod, Aborting!!!" ; Exit 1}
+                            {
+                                $Message = "[Error] Unable to install Module $Mod, Aborting!!!"
+                                If ($ModECK -eq $true){Write-ECKlog -Message $Message} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
+                                Exit 1
+                            }                    
                     }
 
 
