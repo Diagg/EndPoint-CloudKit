@@ -89,10 +89,14 @@
                         $ModStatus = Get-ECKNewModuleVersion -modulename $Mod -LogPath $LogPath
                         If ($ModStatus -ne $false)
                             {
-                                Remove-module $mod -ErrorAction SilentlyContinue
-                                $LoadedMod = Get-Module $mod -ListAvailable | Sort-Object Version -Descending  | Select-Object -First 1|Import-module -passthru
+                                If ($ModStatus.NeedUpdate -eq $true)
+                                    {
+                                        Get-Module $mod -ListAvailable | Sort-Object Version -Descending  | Select-Object -First 1|Import-module
+                                        Write-ECKlog -Message "$Mod module installed version: $($ModStatus.OnlineVersion)"
+                                    }
+                                else
+                                    {Write-ECKlog -Message "$Mod module installed version: $($ModStatus.LocalVersion.version.tostring())" }
                                 If ($Mod -eq 'endpointcloudkit' -and $ModECK -ne $true){New-ECKEnvironment -FullGather -LogPath $LogPath ; $ModECK = $true}
-                                Write-ECKlog -Message "$Mod module installed version: $($LoadedMod.version.tostring())"
                             }
                         Else
                             {Write-ECKlog -Message "[Error] Unable to install Module $Mod, Aborting!!!" ; Exit 1}
