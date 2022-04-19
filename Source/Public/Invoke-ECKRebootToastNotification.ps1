@@ -147,7 +147,7 @@
                             }
                     }
 
-                $ToastMessage3 = "A Mandatory reboot is planned at $($Starttime.addMinutes($TimeLimit))"
+                $ToastMessage3 = "A Mandatory reboot is planned on $($Starttime.addMinutes($TimeLimit))"
                 If ([String]::IsNullOrWhiteSpace($ToastMessage2)){$ToastMessage2 = $ToastMessage3} Else {$ToastMessage2 = "`r`n`r`n$ToastMessage2`r`n`r`n$ToastMessage3`r`n`r`n" }
 
                 # Rebuild Buttons

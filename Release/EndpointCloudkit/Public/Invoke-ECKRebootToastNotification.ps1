@@ -197,7 +197,7 @@
         $script_Notif = [ScriptBlock]::Create($Script_Variables.ToString() + $script_Notif.ToString())
 
         # Set Registry
-        Get-ECKExecutionContext
+        If($Null -eq $ECK.CurrentUserRegistry){Get-ECKExecutionContext}
         New-item -Path "$($ECK.CurrentUserRegistry)\SOFTWARE\ECK\RebootToastNotification" -Force|Out-Null
         New-ItemProperty -Path "$($ECK.CurrentUserRegistry)\SOFTWARE\ECK\RebootToastNotification" -Name "StartTime" -Value $(Get-date) -Force|Out-Null
         New-ItemProperty -Path "$($ECK.CurrentUserRegistry)\SOFTWARE\ECK\RebootToastNotification" -Name "IsRebooted" -Value "FALSE" -Force|Out-Null

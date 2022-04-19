@@ -71,29 +71,29 @@
             }
 
         Write-ECKLog "Logged on user is: $CurrentUser" -Path $LogPath
-        $ECK|Add-Member -MemberType NoteProperty -Name 'User' -Value $CurrentUser
+        $ECK|Add-Member -MemberType NoteProperty -Name 'User' -Value $CurrentUser -Force
         Write-ECKLog "user SID is: $CurrentUserID" -Path $LogPath
-        $ECK|Add-Member -MemberType NoteProperty -Name 'UserID' -Value $CurrentUserID
+        $ECK|Add-Member -MemberType NoteProperty -Name 'UserID' -Value $CurrentUserID -Force
         Write-ECKLog "User profile is: $CurrentUserProfile" -Path $LogPath
-        $ECK|Add-Member -MemberType NoteProperty -Name 'UserProfile' -Value $CurrentUserProfile
+        $ECK|Add-Member -MemberType NoteProperty -Name 'UserProfile' -Value $CurrentUserProfile -Force
         Write-ECKLog "User UPN is: $CurrentUserUPN" -Path $LogPath
-        $ECK|Add-Member -MemberType NoteProperty -Name 'UserUPN' -Value $CurrentUserUPN
+        $ECK|Add-Member -MemberType NoteProperty -Name 'UserUPN' -Value $CurrentUserUPN -Force
         Write-ECKLog "User Registry Profile is: $CurrentUserReg" -Path $LogPath
-        $ECK|Add-Member -MemberType NoteProperty -Name 'CurrentUserRegistry' -Value $CurrentUserReg
+        $ECK|Add-Member -MemberType NoteProperty -Name 'CurrentUserRegistry' -Value $CurrentUserReg -Force
 
         if (-NOT ([Security.Principal.WindowsIdentity]::GetCurrent().Groups -contains 'S-1-5-32-544')) {$IsAdmin = $False} else {$IsAdmin = $True}
         Write-ECKLog "User $CurrentUser is Admin: $IsAdmin" -Path $LogPath
-        $ECK|Add-Member -MemberType NoteProperty -Name 'UserIsAdmin' -Value $IsAdmin
+        $ECK|Add-Member -MemberType NoteProperty -Name 'UserIsAdmin' -Value $IsAdmin -Force
 
         If ($env:USERPROFILE -eq "C:\Windows\System32\Config\systemprofile") {$RunAsSystem = $True} else {$RunAsSystem = $False}
         Write-ECKLog "Currently running in System context: $RunAsSystem" -Path $LogPath
-        $ECK|Add-Member -MemberType NoteProperty -Name 'UserIsSystem' -Value $RunAsSystem
+        $ECK|Add-Member -MemberType NoteProperty -Name 'UserIsSystem' -Value $RunAsSystem -Force
 
         If (([System.Security.Principal.WindowsIdentity]::GetCurrent().groups.value -contains "S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464") -eq $true){$RunAsTI = $True} else {$RunAsTI = $False}
         Write-ECKLog "Currently running in Trusted Installer context: $RunAsTI" -Path $LogPath
-        $ECK|Add-Member -MemberType NoteProperty -Name 'RunAsTrustedInstaller' -Value $RunAsTI
+        $ECK|Add-Member -MemberType NoteProperty -Name 'RunAsTrustedInstaller' -Value $RunAsTI -Force
 
         IF ($IsAdmin -eq $true -or $RunAsSystem -eq $true) {$KeyRoot = "HKLM:"} Else {$KeyRoot = "HKCU:"}
         Write-ECKLog "Allowed Registry key : $KeyRoot" -Path $LogPath
-        $ECK|Add-Member -MemberType NoteProperty -Name 'KeyRoot' -Value $KeyRoot
+        $ECK|Add-Member -MemberType NoteProperty -Name 'KeyRoot' -Value $KeyRoot -Force
     }
