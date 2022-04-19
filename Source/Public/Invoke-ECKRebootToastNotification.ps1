@@ -153,10 +153,10 @@
                 # Rebuild Buttons
                 $SetButtons = $False
                 $Buttons = "<actions>`r`n"
-                If ($Button1[1] -ne ''){$Buttons = $Buttons + "                        <action arguments = '$($Button1[1]):' content = '$($Button1[0])' activationType='$($Button1[2])' />`r`n";$SetButtons = $True}
-                If ($Button2[1] -ne ''){$Buttons = $Buttons + "                        <action arguments = '$($Button2[1]):' content = '$($Button2[0])' activationType='$($Button2[2])' />`r`n";$SetButtons = $True}
-                If ($Button3[1] -ne ''){$Buttons = $Buttons + "                        <action arguments = '$($Button3[1]):' content = '$($Button3[0])' activationType='$($Button3[2])' />`r`n";$SetButtons = $True}
-                If ($SetButtons -eq $True){$Buttons = $Buttons + "                    </actions>"}Else{$Buttons = ''}
+                If ($Button1[1] -ne ''){$Buttons = $Buttons + "<action arguments = '$($Button1[1]):' content = '$($Button1[0])' activationType='$($Button1[2])' />`r`n";$SetButtons = $True}
+                If ($Button2[1] -ne ''){$Buttons = $Buttons + "<action arguments = '$($Button2[1]):' content = '$($Button2[0])' activationType='$($Button2[2])' />`r`n";$SetButtons = $True}
+                If ($Button3[1] -ne ''){$Buttons = $Buttons + "<action arguments = '$($Button3[1]):' content = '$($Button3[0])' activationType='$($Button3[2])' />`r`n";$SetButtons = $True}
+                If ($SetButtons -eq $True){$Buttons = $Buttons + "</actions>"}Else{$Buttons = ''}
                 $Buttons = $Buttons.replace('dismiss:','dismiss')
 
                 # Rebuild Images
