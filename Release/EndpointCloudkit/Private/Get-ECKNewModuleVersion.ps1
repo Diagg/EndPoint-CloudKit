@@ -19,7 +19,7 @@
             {
                 If ((Get-date -Date $LastEval) -eq ((get-date).date))
                     {
-                        $Message = "[Warning] Module $ModuleName, was alreqdy downloaded today, to save bandwidth, now new download will occurs until tomorrow !"
+                        $Message = "[Warning] Module $ModuleName, was already downloaded today, to save bandwidth, now new download will occurs until tomorrow !"
                         If ($ModECK -eq $true){Write-ECKlog -Message $Message -type 2} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
                         return [PSCustomObject]@{NeedUpdate = $False ; ModuleName = $ModuleName}
                     }
@@ -41,14 +41,14 @@
         Try {$psgalleryversion = Find-Module -Name $ModuleName -ErrorAction stop| Sort-Object Version -Descending | Select-Object Version -First 1}
         Catch
             {
-                If (-not ($null -eq $version))
+                If (-not ($null -eq $version) -and $version -ne "0.0.0.0")
                     {
                         $Message = "[Warning] No internet connection available, continuing with local version $version of $ModuleName"
                         If ($ModECK -eq $true){Write-ECKlog -Message $Message -type 2} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
                     }
                 Else
                     {
-                        $Message = "[ERROR] No internet connection available, unable to load module $ModuleName, Aborting !!!"
+                        $Message = "[ERROR] No internet connection available, unable to load module $ModuleName !!!"
                         If ($ModECK -eq $true){Write-ECKlog -Message $Message -type 3} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
                         Exit 1
                     }

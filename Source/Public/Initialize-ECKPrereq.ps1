@@ -90,7 +90,7 @@
                         If ($ModStatus -ne $false)
                             {
                                 Remove-module $Mod -force -ErrorAction SilentlyContinue
-                                $ImportedMod = Get-Module $mod -ListAvailable | Sort-Object Version -Descending  | Select-Object -First 1|Import-module -PassThru -Force
+                                $ImportedMod = Get-Module $mod -ListAvailable | Sort-Object Version -Descending  | Select-Object -First 1|Import-module -Force -Global -PassThru
 
                                 $Message = "$Mod module installed version: $($ImportedMod.Version.ToString())"
                                 If ($ModECK -eq $true){Write-ECKlog -Message $Message} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
