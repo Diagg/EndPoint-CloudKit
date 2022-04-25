@@ -4,6 +4,7 @@
         # Version 1.1 - 10/03/2022 - Added check for Internet connection
         # Version 1.2 - 14/04/2022 - Module version is now returned
         # Version 1.3 - 16/04/2022 - returned value is now an object
+        # Version 1.4 - 22/04/2022 - Added checks if $Lasteval doesn't retun anything !
 
         Param(
                 [Parameter(Mandatory = $true)][String]$ModuleName,
@@ -14,7 +15,8 @@
         if(Test-Path function:write-ECKLog){$ModECK = $true} Else {$ModECK = $false}
 
         # Check if we need to update today
-        $lastEval = (Get-ItemProperty "HKLM:\SOFTWARE\ECK\DependenciesCheck" -name $ModuleName -ErrorAction SilentlyContinue).$ModuleName
+        Try{[DateTime]$lastEval = (Get-ItemProperty "HKLM:\SOFTWARE\ECK\DependenciesCheck" -name $ModuleName -ErrorAction SilentlyContinue).$ModuleName}
+        Catch{$lastEval = $Null}
         If (![String]::IsNullOrWhiteSpace($lastEval))
             {
                 If ((Get-date -Date $LastEval) -eq ((get-date).date))

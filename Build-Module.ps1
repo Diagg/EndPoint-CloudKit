@@ -6,7 +6,7 @@ $apiKey = ''
 
 
 $Params = @{
-    "ModuleVersion"         = '0.0.12.1'
+    "ModuleVersion"         = '0.0.13.0'
     "RootModule" = 'EndpointCloudkit.psm1'
     "GUID"                  = 'd1488437-3d1f-439e-b188-30e208cbd9df'
     "Path" 				    = "$($Script:CurrentScriptPath)\Source\EndpointCloudkit.psd1"
@@ -14,7 +14,7 @@ $Params = @{
     "CompanyName" 			= 'OSD-Couture.com'
     "Copyright"             = '(c) 2022 Diagg/OSD-Couture.com. All rights reserved.'
     "CompatiblePSEditions" 	= @('Desktop')
-    "FunctionsToExport" 	= @('Get-ECKExecutionContext','Get-ECKOsFriendlyName','Get-ECKPendingReboot','Invoke-ECKContinueOnNextReboot','Invoke-ECKRebootToastNotification','Invoke-ECKScheduledTask','Write-ECKLog','Set-ECKEnvironment','Get-ECKGithubContent','Initialize-ECKPrereq','Set-ECKPendingReboot')
+    "FunctionsToExport" 	= @('Get-ECKExecutionContext','Get-ECKOsFriendlyName','Get-ECKPendingReboot','Invoke-ECKContinueOnNextReboot','Invoke-ECKRebootToastNotification','Invoke-ECKScheduledTask','Write-ECKLog','New-ECKEnvironment','Get-ECKGithubContent','Initialize-ECKPrereq','Add-ECKPendingReboot','New-ECKTag')
     "CmdletsToExport" 		= @()
     "VariablesToExport" 	= ''
     "AliasesToExport" 		= @()
@@ -25,7 +25,7 @@ $Params = @{
     "Description"           = @'
 Endpoint Cloud kit Module (ECK), a set of cmdlet to help building scripts or application deployed by your MDM (Intune/Workspace One...)
 
-- Run Powershell script or executable in User/system/admin/tusted installer/System Interactive context
+- Run Powershell script or executable in User/system/admin/trusted installer/System Interactive context
 - Restart your script after reboot
 - Logging function
 - Configurable reboot toast notifications
@@ -49,7 +49,15 @@ Endpoint Cloud kit Module (ECK), a set of cmdlet to help building scripts or app
 0.0.10.0 2022/04/04 * Beta version - Added function Set-ECKEnvironment to Gather local informations In a script scoped objet variable
 0.0.11.0 2022/04/12 * Beta version - Invoke-ECKScheduledTask can now monitor running scheduled task
 0.0.11.1 2022/04/12 * Beta version - Fixed bugs in Set-ECKEnvironment
-0.0.12.0 2022/04/12 * Beta version - Added Functions Get-ECKGithubContent, Initialize-ECKPrereq, Set-ECKPendingReboot
+0.0.12.0 2022/04/16 * Beta version - Added Functions Get-ECKGithubContent, Initialize-ECKPrereq, Add-ECKPendingReboot, Set-ECKEnvironment is renamed New-ECKEnvironment
+0.0.12.5 2022/04/18 * Beta version - fixed a Hell lots of bugs !
+0.0.12.6 2022/04/16 * Beta version - fixed even more bugs !
+0.0.12.7 2022/04/19 * Beta version - fixed a bugs in module scope !
+0.0.12.8 2022/04/19 * Beta version - fixed a bugs in Get-ECKExecutionContext !
+0.0.12.9 2022/04/19 * Beta version - fixed a bugs in Invoke-ECKRebootToastNotification !
+0.0.12.10 2022/04/19 * Beta version - fixed line lenght of command Out-File to 1000 !
+0.0.12.11 2022/04/20 * Beta version - Reboot time is now embedded in
+0.0.13.0 2022/04/25 * Beta version - Added New taf function
 '@
 }
 

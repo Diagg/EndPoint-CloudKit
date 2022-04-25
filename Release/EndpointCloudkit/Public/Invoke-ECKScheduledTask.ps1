@@ -1,6 +1,6 @@
 ﻿Function Invoke-ECKScheduledTask
     {
-        # Version 3.4 - 17/02/2022 - Tasks run imedialtly are deleted once launched
+        # Version 3.4 - 17/02/2022 - Tasks running imedialtly are deleted once launched
         # Version 3.5 - 08/03/2022 - Fixed a bug in task detection with argument 'Now', Removed parameter 'Interactive'
         # Version 3.6 - 21/03/2022 - Task can now run as trusted Installer
         # Version 3.7 - 30/03/2022 - Leverage ServiceUI.exe to run task interactivelly, added back parameter 'Interactive'
@@ -146,7 +146,7 @@
                             }
                         Else
                             {$ScriptPath = "$($ENV:TEMP)\$ScriptGuid.ps1"}
-                        $ScriptBlock|Out-File -FilePath $ScriptPath -Encoding default
+                        $ScriptBlock|Out-File -FilePath $ScriptPath -Encoding default -width 1000
                         Write-ECKLog "Script Block converted to file $ScriptPath"
                     }
 
