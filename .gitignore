@@ -1,1 +1,4 @@
 Build-Module - local.ps1
+Build-Module - Dev.ps1
+EndpointCloudkit-Alpha.psd1
+EndpointCloudkit-Alpha.psm1
