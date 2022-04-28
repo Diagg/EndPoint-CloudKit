@@ -21,7 +21,7 @@
         $Acl = Get-ACL $script:ContentPath
         $AccessRule= New-Object System.Security.AccessControl.FileSystemAccessRule($((Get-LocalGroup -SID S-1-5-32-545).Name),"ReadAndExecute","ContainerInherit,Objectinherit","none","Allow")
         $Acl.AddAccessRule($AccessRule)
-        Set-Acl $script:ContentPath $Acl -ErrorAction SilentlyContinue        
+        Set-Acl $script:ContentPath $Acl -ErrorAction SilentlyContinue
 
         ## Set Tls to 1.2
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12

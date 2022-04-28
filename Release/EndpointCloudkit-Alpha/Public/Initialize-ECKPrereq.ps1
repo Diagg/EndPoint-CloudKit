@@ -1,20 +1,27 @@
 ﻿Function Initialize-ECKPrereq
     {
         # Version 1.1 - 16/04/2022 - Code cleanup
+        # Version 1.2 - 28/04/2022 - Added support for ECK-Content
 
         Param (
-                [String[]]$Module,                                                                          # List of module to import separated by coma
-                [string]$LogPath = "C:\Windows\Logs\ECK\ECK-Init.log",                                      # Defaut log file path
-                [bool]$NugetDevTool = $false,                                                               # Allow installation of nuget.exe,
-                [Parameter(ParameterSetName="Contentload")][String[]]$ContentToLoad,                        # Download scripts form Github and place them in $ContentPath folder
-                [Parameter(ParameterSetName="Contentload")][String]$ContentPath = "$env:temp\ECK-Content",  # Path where script are downloaded
-                [String[]]$ScriptToImport                                                                   # download scripts from Github and import them in the current Powershell session.
+                [String[]]$Module,                                                                              # List of module to import separated by coma
+                [string]$LogPath = "C:\Windows\Logs\ECK\ECK-Init.log",                                          # Defaut log file path
+                [bool]$NugetDevTool = $false,                                                                   # Allow installation of nuget.exe,
+                [Parameter(ParameterSetName="Contentload")][String[]]$ContentToLoad,                            # Download scripts form Github and place them in $ContentPath folder
+                [Parameter(ParameterSetName="Contentload")][String]$ContentPath = 'C:\ProgramData\ECK-Content', # Path where script are downloaded
+                [String[]]$ScriptToImport                                                                       # download scripts from Github and import them in the current Powershell session.
             )
 
         ## Create Folders and registry keys
         If (-not (Test-Path $ContentPath)){New-Item $ContentPath -ItemType Directory -Force|Out-Null}
         If (-not (Test-Path $(Split-Path $LogPath ))){New-Item $(Split-Path $LogPath) -ItemType Directory -Force|Out-Null}
         If (-not (test-path "HKLM:\SOFTWARE\ECK\DependenciesCheck")){New-item -Path "HKLM:\SOFTWARE\ECK\DependenciesCheck" -Force|Out-Null}
+
+        ## Allow read and execute for standard users on $ContentPath folder
+        $Acl = Get-ACL $script:ContentPath
+        $AccessRule= New-Object System.Security.AccessControl.FileSystemAccessRule($((Get-LocalGroup -SID S-1-5-32-545).Name),"ReadAndExecute","ContainerInherit,Objectinherit","none","Allow")
+        $Acl.AddAccessRule($AccessRule)
+        Set-Acl $script:ContentPath $Acl -ErrorAction SilentlyContinue
 
         ## Set Tls to 1.2
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -83,7 +90,7 @@
                                 $ImportedMod = Get-Module $mod -ListAvailable | Sort-Object Version -Descending  | Select-Object -First 1|Import-module -Force -Global -PassThru
                                 Write-ECKlog -Message "$Mod module installed version: $($ImportedMod.Version.ToString())"
 
-                                If ($Mod -eq 'endpointcloudkit'){New-ECKEnvironment -LogPath $LogPath}
+                                If ($Mod -eq 'endpointcloudkit'){New-ECKEnvironment -LogPath $LogPath -ContentPath $ContentPath}
                             }
                         Else
                             {Write-ECKlog -Message "[Error] Unable to install Module $Mod, Aborting!!!" ; Exit 1}
