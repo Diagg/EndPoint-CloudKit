@@ -20,7 +20,7 @@
         IF ([int]($BuildNumber) -lt 22000){$OSVersion = 10 } Else {$OSVersion = 11 }
 
         $Global:ECK = [PSCustomObject]@{
-                ModVersion = $(((Get-Module endpointcloudkit|Sort-Object|Select-Object -last 1).version.tostring()))
+                ModVersion = $(((Get-Module "endpointcloudkit*"|Sort-Object|Select-Object -last 1).version.tostring()))
                 ScriptName = $(split-path $MyInvoc -leaf)
                 ScriptPath = $(split-path $MyInvoc)
                 ScriptFullName =  $MyInvoc
