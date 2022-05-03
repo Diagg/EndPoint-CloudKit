@@ -2,6 +2,7 @@
     {
         # Version 1.1 - 16/04/2022 - Code cleanup
         # Version 1.2 - 28/04/2022 - Added support for ECK-Content
+        # Version 1.3 - 03/05/2022 - Bug fix, Changed $ContentPath location and behavior, update Powershellget if needed
 
         Param (
                 [String[]]$Module,                                                                              # List of module to import separated by coma
@@ -23,7 +24,7 @@
             {
                 $AccessRule= New-Object System.Security.AccessControl.FileSystemAccessRule($((Get-LocalGroup -SID S-1-5-32-545).Name),"ReadAndExecute","ContainerInherit,Objectinherit","none","Allow")
                 $Acl.AddAccessRule($AccessRule)
-                Set-Acl $script:ContentPath $Acl
+                Set-Acl $ContentPath $Acl
             }
 
         ## Set Tls to 1.2
@@ -39,7 +40,7 @@
                 If (-not(Test-path "C:\Program Files\PackageManagement\ProviderAssemblies\nuget\2.8.5.208\Microsoft.PackageManagement.NuGetProvider.dll"))
                     {
                         Try {Install-PackageProvider -Name 'nuget' -Force -ErrorAction stop |Out-Null}
-                        Catch {Write-ECKlog -Message "[ERROR] No internet connection available, Unable to Download Nuget Provider, Aborting !!" ; Exit 1}
+                        Catch {Write-ECKlog -Message "[ERROR] No internet connection available, Unable to Download Nuget Provider, Aborting !!" -type 3 ; Exit 1}
                     }
 
                 Write-ECKlog -Message "Nuget provider installed version: $(((Get-PackageProvider -Name 'nuget'|Sort-Object|Select-Object -First 1).version.tostring()))"
@@ -55,7 +56,7 @@
                                 Unblock-File -Path $Nupkg
                             }
                         Catch
-                            {Write-ECKlog -Message "[ERROR] No internet connection available, Unable to Download Nuget Provider, Aborting !!" ; Exit 1}
+                            {Write-ECKlog -Message "[ERROR] No internet connection available, Unable to Download Nuget Provider, Aborting !!" -type 3 ; Exit 1}
 
                         ## Create Destination folder structure
                         $ModulePath = "C:\Program Files\WindowsPowerShell\Modules\PackageManagement\1.4.7"
@@ -74,29 +75,33 @@
 
                 ## Import Powershell Get
                 If (-not (Get-Module PowershellGet)) {Get-Module 'PowershellGet' -ListAvailable | Sort-Object Version -Descending  | Select-Object -First 1|Import-module}
-                Write-ECKlog -Message "PowershellGet module installed version: $(((Get-Module PowerShellGet|Sort-Object|Select-Object -First 1).version.tostring()))"
+                [Version]$PsGetVersion = $(((Get-Module PowerShellGet|Sort-Object|Select-Object -First 1).version.tostring()))
+                Write-ECKlog -Message "PowershellGet module installed version: $PsGetVersion"
 
                 ## Trust PSGallery
                 If ((Get-PSRepository -Name "PsGallery").InstallationPolicy -ne "Trusted"){Set-PSRepository -Name 'PSGallery' -InstallationPolicy 'Trusted' -SourceLocation 'https://www.powershellgallery.com/api/v2'}
 
-                # Installing Endpoint Cloud Kit
-                If ('endpointcloudkit' -notin $Module){$Module += "endpointcloudkit"}
-                $Module = $Module|Sort-Object -Descending
+                # Add mandatory modules
+                If ('endpointcloudkit' -notin $Module){$Module += "endpointcloudkit" ; $Module = $Module|Sort-Object -Descending}
+                If ($PsGetVersion -lt [version]2.2.5 -and 'PowershellGet' -notin $Module){$Module += "PowershellGet" ; $Module = $Module|Sort-Object -Descending}
 
                 # Installing modules
                 Foreach ($mod in $Module)
                     {
-                        $ModStatus = Get-ECKNewModuleVersion -modulename $Mod
-                        If ($ModStatus -ne $false)
+                        $ModStatus = Get-ECKNewModuleVersion -modulename $Mod -LogPath $LogPath
+                        If ($ModStatus.NeedUpdate -eq $True)
                             {
                                 Remove-module $Mod -force -ErrorAction SilentlyContinue
                                 $ImportedMod = Get-Module $mod -ListAvailable | Sort-Object Version -Descending  | Select-Object -First 1|Import-module -Force -Global -PassThru
+
                                 Write-ECKlog -Message "$Mod module installed version: $($ImportedMod.Version.ToString())"
 
-                                If ($Mod -eq 'endpointcloudkit'){New-ECKEnvironment -LogPath $LogPath -ContentPath $ContentPath}
+                                If ($Mod -eq 'endpointcloudkit'){New-ECKEnvironment -LogPath $LogPath -ContentPath $ContentPath ; $ModECK = $true}
                             }
+                        ElseIf ($ModStatus.NeedUpdate -eq $false)
+                            {Write-ECKlog -Message "Module $Mod aready up to date !"}
                         Else
-                            {Write-ECKlog -Message "[Error] Unable to install Module $Mod, Aborting!!!" ; Exit 1}
+                            {Write-ECKlog -Message "[Error] Unable to install Module $Mod, Aborting!!!" -type 3 ; Exit 1}
                     }
 
 
