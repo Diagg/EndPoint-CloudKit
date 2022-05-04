@@ -5,6 +5,7 @@
         # Version 1.5   - 22/02/2022 - reworked logic
         # Version 1.6   - 25/02/2022 - Bug fix: you could not write only event
         # Version 1.7   - 05/04/2022 - Added support for New-ECKEnvironment
+        # Version 1.8   - 26/04/2022 - Bug fix: parameter EventLogOnly is now functional
 
         [CmdletBinding()]
         [Alias('Write-Log')]
@@ -30,13 +31,13 @@
         $oHour = $(Get-Date -Format "HH:mm:ss")
         $MessageType = @{1 = "Information"; 2 = "Warning"; 3 = "Error"}
         $Tab = [char]9
-
-        # Write the line to the log file
         $Content = "$oDate $oHour, $($MessageType[$type]) $Tab $($Message -replace "`r`n", ", ")"
-        $Content| Out-file -FilePath $Path -Encoding UTF8 -Append -width 1000 -ErrorAction SilentlyContinue
+
+        # Write the line to the log file and to the console
+        If (-not $EventLogOnly.IsPresent){$Content| Out-file -FilePath $Path -Encoding UTF8 -Append -width 1000 -ErrorAction SilentlyContinue}
         If ($OutputToConsole -eq $true){Write-host $Content}
 
-
+        # Write to Event log
         If ($EventLogID)
             {
                 $AppriendlyName = $(Split-Path $Path -Leaf) -replace "-" ,"" -replace ".ps1","" -replace " ",""

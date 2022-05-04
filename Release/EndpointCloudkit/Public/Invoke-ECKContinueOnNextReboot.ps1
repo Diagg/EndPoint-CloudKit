@@ -1,10 +1,9 @@
 ﻿Function Invoke-ECKContinueOnNextReboot
     {
-        #version 2.0
+        # version 2.0
+        # version 3.0 - 26/04/2022 - big code refactoring/cleanup, a lot of legacy code and prameters removed
         Param
             (
-                [Parameter(Mandatory = $true, Position=0)]
-                [String]$HostScriptPath,
                 [Parameter(Mandatory = $false)]
                 [Switch]$ForceReboot,
                 [Parameter(Mandatory = $false)]
@@ -16,43 +15,19 @@
                 [Parameter(Mandatory = $false)]
                 [String]$RebootImage = "",
                 [Parameter(Mandatory = $false)]
-                [String]$RegKeyCounter = "HKLM:\SOFTWARE\ECK\RebootCounter",
-                [Parameter(Mandatory = $false)]
-                [String]$LogPath,
-                [Parameter(Mandatory = $false)]
-                [String]$AdminAccountName
-
+                [String]$RegKeyCounter = "HKLM:\SOFTWARE\OSDC\ECK\RebootCounter"
             )
 
-        Write-ECKLog "Preparing Script $HostScriptPath to restart at next boot" -EventLogID 398
-        If ($LogPath) {Write-ECKLog "Preparing Script $HostScriptPath to restart at next boot" -path $LogPath}
+        Write-ECKLog "Preparing Script $($ECK.ScriptName) to restart at next boot" -EventLogID 398
 
-        $Context = Get-ECKExecutionContext
-        $taskName = "ContinueOnReboot" + $(split-path $HostScriptPath -leaf).Replace("-","").replace(".ps1","").replace(" ","")
+        $taskName = "ContinueOnReboot"
 
-        If ($Context.UserIsAdmin -eq $false -and $Context.RunAsSystem -eq $false)
-            {
-                If ($Logpath){Invoke-ECKScheduledTask -TaskName $taskName -ScriptPath $HostScriptPath -AtLogon -Context User -AllowUsersFullControl -HostScriptPath $HostScriptPath -LogPath LogPath}
-                Else {Invoke-ECKScheduledTask -TaskName $taskName -ScriptPath $HostScriptPath -AtLogon -Context User -AllowUsersFullControl -HostScriptPath $HostScriptPath}
-            }
+        If ($ECK.UserIsAdmin -eq $false -and $ECK.RunAsSystem -eq $false)
+            {Invoke-ECKScheduledTask -TaskName $taskName -ScriptPath $ECK.ScriptFullName -AtLogon -Context User -AllowUsersFullControl}
         ElseIf ($Context.UserIsAdmin -eq $true -and $Context.RunAsSystem -eq $false)
-            {
-                If ($AdminAccountName)
-                    {
-                        If ($Logpath){Invoke-ECKScheduledTask -TaskName $taskName -ScriptPath $HostScriptPath -AtLogon -Context Admin -AdminAccountName $AdminAccountName -HostScriptPath $HostScriptPath -LogPath LogPath}
-                        Else {Invoke-ECKScheduledTask -TaskName $taskName -ScriptPath $HostScriptPath -AtLogon -Context Admin -AdminAccountName $AdminAccountName -HostScriptPath $HostScriptPath}
-                    }
-                Else
-                    {
-                        If ($Logpath){Invoke-ECKScheduledTask -TaskName $taskName -ScriptPath $HostScriptPath -AtLogon -Context Admin -HostScriptPath $HostScriptPath -LogPath LogPath}
-                        Else {Invoke-ECKScheduledTask -TaskName $taskName -ScriptPath $HostScriptPath -AtLogon -Context Admin -HostScriptPath $HostScriptPath}
-                    }
-            }
+            {Invoke-ECKScheduledTask -TaskName $taskName -ScriptPath $ECK.ScriptFullName -AtLogon -Context Admin}
         ElseIf ($Context.RunAsSystem -eq $True)
-            {
-                If ($Logpath){Invoke-ECKScheduledTask -TaskName $taskName -ScriptPath $HostScriptPath -AtLogon -Context system -HostScriptPath $HostScriptPath -LogPath LogPath}
-                Else {Invoke-ECKScheduledTask -TaskName $taskName -ScriptPath $HostScriptPath -AtLogon -Context system -HostScriptPath $HostScriptPath}
-            }
+            {Invoke-ECKScheduledTask -TaskName $taskName -ScriptPath $ECK.ScriptFullName -AtLogon -Context system}
 
         # Set Reboot Counter
         If (-not (test-path $RegKeyCounter)){New-item -Path $RegKeyCounter -Force|Out-Null}
@@ -63,18 +38,17 @@
 
         If($ForceReboot)
             {
-                If ($LogPath) {Write-ECKLog "Restarting computer Right Now!" -path $LogPath}
                 Write-ECKLog "Restarting computer Right Now!" -EventLogID 399
                 Restart-Computer -Confirm:$false -Force
             }
         ElseIf($NoRebootPrompt)
-            {If ($LogPath) {Write-ECKLog "No Restart initated, user will reboot at his own pace" -path $LogPath}}
+            {Write-ECKLog "No Restart initated, user will reboot at his own pace"}
         Else
             {
-                If ($LogPath) {Write-ECKLog "A toast notification will prompt user to set a restart" -path $LogPath}
-                Invoke-ECKRebootToastNotification -SmallLogo $RebootLogo -Image $RebootImage -ToastMessage $RebootMessage -HostScriptPath $HostScriptPath
+                Write-ECKLog "A toast notification will prompt user to set a restart"
+                Invoke-ECKRebootToastNotification -SmallLogo $RebootLogo -Image $RebootImage -ToastMessage $RebootMessage
             }
 
-        If ($LogPath) {Write-ECKLog "Exiting Program, see you on next boot !!!" -path $LogPath}
+        Write-ECKLog "Exiting Program, see you on next boot !!!"
         Exit 0
     }

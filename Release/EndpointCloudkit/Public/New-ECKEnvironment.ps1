@@ -5,11 +5,13 @@
         # Version 1.2 - 12/04/2022 - bug fix
         # Version 1.3 - 14/04/2022 - Added pending reboot state to Full Gather evaluation
         # Version 1.5 - 22/04/2022 - Added Hostname, Ip Address, OS Architecture, OS version
+        # Version 1.6 - 26/04/2022 - Detection is now done in full scope by default. FullGather parameter is removed
+        # Version 1.7 - 28/04/2022 - Added parameter $ContentPath, added ContentPath in $ECK object
 
         Param (
-                [string]$LogPath = "C:\Windows\Logs\ECK",
-                [switch]$FullGather
-            )
+                    [string]$LogPath = "C:\Windows\Logs\ECK",
+                    [string]$ContentPath = 'C:\ProgramData\ECK-Content'
+                )
 
         Remove-Variable ECK -Scope global -ErrorAction SilentlyContinue -force
         $MyInvoc = $global:PSCommandPath
@@ -22,13 +24,14 @@
         IF ([int]($BuildNumber) -lt 22000){$OSVersion = 10 } Else {$OSVersion = 11 }
 
         $Global:ECK = [PSCustomObject]@{
-                ModVersion = $(((Get-Module endpointcloudkit|Sort-Object|Select-Object -last 1).version.tostring()))
+                ModVersion = $(((Get-Module "endpointcloudkit*"|Sort-Object|Select-Object -last 1).version.tostring()))
                 ScriptName = $(split-path $MyInvoc -leaf)
                 ScriptPath = $(split-path $MyInvoc)
                 ScriptFullName =  $MyInvoc
                 LogName = $(split-path $LogPath -leaf)
                 LogPath = $(split-path $LogPath)
                 LogFullName = $LogPath
+                ContentPath = $ContentPath
                 SystemHostName = $([System.Environment]::MachineName)
                 SystemIPAddress = $((Get-NetIPAddress -AddressFamily IPv4 -PrefixOrigin Dhcp -AddressState Preferred).IPAddress)
                 OSArchitectureIsX64 = $([System.Environment]::Is64BitOperatingSystem)
@@ -39,10 +42,7 @@
         Write-ECKlog "Script Path is: $($ECK.ScriptFullName)"
         Write-ECKlog "Log Path is: $($ECK.LogFullName)"
 
-        If ($FullGather.IsPresent)
-            {
-                Get-ECKExecutionContext
-                $ECK|Add-Member -MemberType NoteProperty -Name 'OsFriendlyName' -Value $(Get-ECKOsFriendlyName)
-                Get-ECKPendingReboot|Out-Null
-            }
+        Get-ECKExecutionContext
+        $ECK|Add-Member -MemberType NoteProperty -Name 'OsFriendlyName' -Value $(Get-ECKOsFriendlyName)
+        Get-ECKPendingReboot|Out-Null
     }

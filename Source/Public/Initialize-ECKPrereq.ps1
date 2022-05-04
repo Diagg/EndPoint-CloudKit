@@ -20,7 +20,7 @@
 
         ## Allow read and execute for standard users on $ContentPath folder
         $Acl = Get-ACL $ContentPath
-        If (($Acl.Access|Where-Object {$_.IdentityReference -eq "BUILTIN\Users" -and $_.AccessControlType -eq "Allow" -and $_.FileSystemRights -like "*ReadAndExecute*"}).count -lt 1)
+        If (($Acl.Access|Where-Object {$_.IdentityReference -eq "BUILTIN\$((Get-LocalGroup -SID S-1-5-32-545).Name)" -and $_.AccessControlType -eq "Allow" -and $_.FileSystemRights -like "*ReadAndExecute*"}).count -lt 1)
             {
                 $AccessRule= New-Object System.Security.AccessControl.FileSystemAccessRule($((Get-LocalGroup -SID S-1-5-32-545).Name),"ReadAndExecute","ContainerInherit,Objectinherit","none","Allow")
                 $Acl.AddAccessRule($AccessRule)
@@ -83,7 +83,7 @@
 
                 # Add mandatory modules
                 If ('endpointcloudkit' -notin $Module){$Module += "endpointcloudkit" ; $Module = $Module|Sort-Object -Descending}
-                If ($PsGetVersion -lt [version]2.2.5 -and 'PowershellGet' -notin $Module){$Module += "PowershellGet" ; $Module = $Module|Sort-Object -Descending}
+                If ($PsGetVersion -lt [version]"2.2.5" -and 'PowershellGet' -notin $Module){$Module += "PowershellGet" ; $Module = $Module|Sort-Object -Descending}
 
                 # Installing modules
                 Foreach ($mod in $Module)

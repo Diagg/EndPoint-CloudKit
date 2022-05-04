@@ -1,18 +1,31 @@
 ﻿Function Initialize-ECKPrereq
     {
+        # Version 1.1 - 16/04/2022 - Code cleanup
+        # Version 1.2 - 28/04/2022 - Added support for ECK-Content
+        # Version 1.3 - 03/05/2022 - Bug fix, Changed $ContentPath location and behavior, update Powershellget if needed
+
         Param (
-                [String[]]$Module,                                                                          # List of module to import separated by coma
-                [string]$LogPath = "C:\Windows\Logs\ECK\ECK-Init.log",                                      # Defaut log file path
-                [bool]$NugetDevTool = $false,                                                               # Allow installation of nuget.exe,
-                [Parameter(ParameterSetName="Contentload")][String[]]$ContentToLoad,                        # Download scripts form Github and place them in $ContentPath folder
-                [Parameter(ParameterSetName="Contentload")][String]$ContentPath = "$env:temp\ECK-Content",  # Path where script are downloaded
-                [String[]]$ScriptToImport                                                                   # download scripts from Github and import them in the current Powershell session.
+                [String[]]$Module,                                                                              # List of module to import separated by coma
+                [string]$LogPath = "C:\Windows\Logs\ECK\ECK-Init.log",                                          # Defaut log file path
+                [bool]$NugetDevTool = $false,                                                                   # Allow installation of nuget.exe,
+                [Parameter(ParameterSetName="Contentload")][String[]]$ContentToLoad,                            # Download scripts form Github and place them in $ContentPath folder
+                [Parameter(ParameterSetName="Contentload")][String]$ContentPath = 'C:\ProgramData\ECK-Content', # Path where script are downloaded
+                [String[]]$ScriptToImport                                                                       # download scripts from Github and import them in the current Powershell session.
             )
 
         ## Create Folders and registry keys
         If (-not (Test-Path $ContentPath)){New-Item $ContentPath -ItemType Directory -Force|Out-Null}
         If (-not (Test-Path $(Split-Path $LogPath ))){New-Item $(Split-Path $LogPath) -ItemType Directory -Force|Out-Null}
         If (-not (test-path "HKLM:\SOFTWARE\ECK\DependenciesCheck")){New-item -Path "HKLM:\SOFTWARE\ECK\DependenciesCheck" -Force|Out-Null}
+
+        ## Allow read and execute for standard users on $ContentPath folder
+        $Acl = Get-ACL $ContentPath
+        If (($Acl.Access|Where-Object {$_.IdentityReference -eq "BUILTIN\Users" -and $_.AccessControlType -eq "Allow" -and $_.FileSystemRights -like "*ReadAndExecute*"}).count -lt 1)
+            {
+                $AccessRule= New-Object System.Security.AccessControl.FileSystemAccessRule($((Get-LocalGroup -SID S-1-5-32-545).Name),"ReadAndExecute","ContainerInherit,Objectinherit","none","Allow")
+                $Acl.AddAccessRule($AccessRule)
+                Set-Acl $ContentPath $Acl
+            }
 
         ## Set Tls to 1.2
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -23,21 +36,14 @@
 
         Try
             {
-                $ModECK = $true
-
                 ## install Nuget provider
                 If (-not(Test-path "C:\Program Files\PackageManagement\ProviderAssemblies\nuget\2.8.5.208\Microsoft.PackageManagement.NuGetProvider.dll"))
                     {
-                        Try{Install-PackageProvider -Name 'nuget' -Force -ErrorAction stop |Out-Null}
-                        Catch
-                            {
-                                $Message = "[ERROR] No internet connection available, Unable to Download Nuget Provider, Aborting !!"
-                                If ($ModECK -eq $true){Write-ECKlog -Message $Message} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
-                                Exit 1
-                            }
+                        Try {Install-PackageProvider -Name 'nuget' -Force -ErrorAction stop |Out-Null}
+                        Catch {Write-ECKlog -Message "[ERROR] No internet connection available, Unable to Download Nuget Provider, Aborting !!" -type 3 ; Exit 1}
                     }
-                $Message = "Nuget provider installed version: $(((Get-PackageProvider -Name 'nuget'|Sort-Object|Select-Object -First 1).version.tostring()))"
-                If ($ModECK -eq $true){Write-ECKlog -Message $Message} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
+
+                Write-ECKlog -Message "Nuget provider installed version: $(((Get-PackageProvider -Name 'nuget'|Sort-Object|Select-Object -First 1).version.tostring()))"
 
                 ## Install Packagemangment Module dependencie of Powershell Get if we are under system account
                 IF ((get-module PackageManagement -ListAvailable|Select-Object -first 1).version -notlike "1.4*" -and $env:UserProfile -eq 'C:\Windows\system32\config\systemprofile')
@@ -50,11 +56,7 @@
                                 Unblock-File -Path $Nupkg
                             }
                         Catch
-                            {
-                                $Message = "[ERROR] No internet connection available, Unable to Download Nuget Provider, Aborting !!"
-                                If ($ModECK -eq $true){Write-ECKlog -Message $Message} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
-                                Exit 1
-                            }
+                            {Write-ECKlog -Message "[ERROR] No internet connection available, Unable to Download Nuget Provider, Aborting !!" -type 3 ; Exit 1}
 
                         ## Create Destination folder structure
                         $ModulePath = "C:\Program Files\WindowsPowerShell\Modules\PackageManagement\1.4.7"
@@ -73,36 +75,33 @@
 
                 ## Import Powershell Get
                 If (-not (Get-Module PowershellGet)) {Get-Module 'PowershellGet' -ListAvailable | Sort-Object Version -Descending  | Select-Object -First 1|Import-module}
-                $Message = "PowershellGet module installed version: $(((Get-Module PowerShellGet|Sort-Object|Select-Object -First 1).version.tostring()))"
-                If ($ModECK -eq $true){Write-ECKlog -Message $Message} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
+                [Version]$PsGetVersion = $(((Get-Module PowerShellGet|Sort-Object|Select-Object -First 1).version.tostring()))
+                Write-ECKlog -Message "PowershellGet module installed version: $PsGetVersion"
 
                 ## Trust PSGallery
                 If ((Get-PSRepository -Name "PsGallery").InstallationPolicy -ne "Trusted"){Set-PSRepository -Name 'PSGallery' -InstallationPolicy 'Trusted' -SourceLocation 'https://www.powershellgallery.com/api/v2'}
 
-                # Installing Endpoint Cloud Kit
-                If ('endpointcloudkit' -notin $Module){$Module += "endpointcloudkit"}
-                $Module = $Module|Sort-Object -Descending
+                # Add mandatory modules
+                If ('endpointcloudkit' -notin $Module){$Module += "endpointcloudkit" ; $Module = $Module|Sort-Object -Descending}
+                If ($PsGetVersion -lt [version]2.2.5 -and 'PowershellGet' -notin $Module){$Module += "PowershellGet" ; $Module = $Module|Sort-Object -Descending}
 
                 # Installing modules
                 Foreach ($mod in $Module)
                     {
                         $ModStatus = Get-ECKNewModuleVersion -modulename $Mod -LogPath $LogPath
-                        If ($ModStatus -ne $false)
+                        If ($ModStatus.NeedUpdate -eq $True)
                             {
                                 Remove-module $Mod -force -ErrorAction SilentlyContinue
                                 $ImportedMod = Get-Module $mod -ListAvailable | Sort-Object Version -Descending  | Select-Object -First 1|Import-module -Force -Global -PassThru
 
-                                $Message = "$Mod module installed version: $($ImportedMod.Version.ToString())"
-                                If ($ModECK -eq $true){Write-ECKlog -Message $Message} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
+                                Write-ECKlog -Message "$Mod module installed version: $($ImportedMod.Version.ToString())"
 
-                                If ($Mod -eq 'endpointcloudkit'){New-ECKEnvironment -FullGather -LogPath $LogPath ; $ModECK = $true}
+                                If ($Mod -eq 'endpointcloudkit'){New-ECKEnvironment -LogPath $LogPath -ContentPath $ContentPath ; $ModECK = $true}
                             }
+                        ElseIf ($ModStatus.NeedUpdate -eq $false)
+                            {Write-ECKlog -Message "Module $Mod aready up to date !"}
                         Else
-                            {
-                                $Message = "[Error] Unable to install Module $Mod, Aborting!!!"
-                                If ($ModECK -eq $true){Write-ECKlog -Message $Message} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
-                                Exit 1
-                            }
+                            {Write-ECKlog -Message "[Error] Unable to install Module $Mod, Aborting!!!" -type 3 ; Exit 1}
                     }
 
 
@@ -161,11 +160,8 @@
             }
         Catch
             {
-                $Message = $_.Exception.Message.ToString()
-                If ($ModECK -eq $true){Write-ECKlog -Message $Message -Type 3} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
-                $Message =  $_.InvocationInfo.PositionMessage.ToString()
-                If ($ModECK -eq $true){Write-ECKlog -Message $Message -Type 3} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
-                $Message = "[Error] Unable to install default providers, Enpdoint Cloud Kit or Dependencies, Aborting!!!"
-                If ($ModECK -eq $true){Write-ECKlog -Message $Message -Type 3} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
+                Write-ECKlog -Message $_.Exception.Message.ToString()-Type 3
+                Write-ECKlog -Message $_.InvocationInfo.PositionMessage.ToString() -Type 3
+                Write-ECKlog -Message "[Error] Unable to install default providers, Enpdoint Cloud Kit or Dependencies, Aborting!!!" -Type 3
             }
     }

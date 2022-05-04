@@ -5,14 +5,13 @@
         # Version 1.2 - 14/04/2022 - Module version is now returned
         # Version 1.3 - 16/04/2022 - returned value is now an object
         # Version 1.4 - 22/04/2022 - Added checks if $Lasteval doesn't retun anything !
+        # Version 1.5 - 26/04/20224 - Code cleanup
+        # Version 1.6 - 03/05/2022 - Added Error handeling on module import
 
         Param(
                 [Parameter(Mandatory = $true)][String]$ModuleName,
                 [String]$LogPath
             )
-
-        # Check Log Method
-        if(Test-Path function:write-ECKLog){$ModECK = $true} Else {$ModECK = $false}
 
         # Check if we need to update today
         Try{[DateTime]$lastEval = (Get-ItemProperty "HKLM:\SOFTWARE\ECK\DependenciesCheck" -name $ModuleName -ErrorAction SilentlyContinue).$ModuleName}
@@ -21,8 +20,7 @@
             {
                 If ((Get-date -Date $LastEval) -eq ((get-date).date))
                     {
-                        $Message = "[Warning] Module $ModuleName, was already downloaded today, to save bandwidth, now new download will occurs until tomorrow !"
-                        If ($ModECK -eq $true){Write-ECKlog -Message $Message -type 2} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
+                        Write-ECKlog -Message "[Warning] Module $ModuleName, was already downloaded today, to save bandwidth, now new download will occurs until tomorrow !" -type 2
                         return [PSCustomObject]@{NeedUpdate = $False ; ModuleName = $ModuleName}
                     }
             }
@@ -37,23 +35,16 @@
                 $version = $version.version.tostring()
             }
         Else
-        {$a = "0.0" ; $version = "0.0.0.0"}
+            {$a = "0.0" ; $version = "0.0.0.0"}
 
         #getting latest module version from ps gallery
         Try {$psgalleryversion = Find-Module -Name $ModuleName -ErrorAction stop| Sort-Object Version -Descending | Select-Object Version -First 1}
         Catch
             {
                 If (-not ($null -eq $version) -and $version -ne "0.0.0.0")
-                    {
-                        $Message = "[Warning] No internet connection available, continuing with local version $version of $ModuleName"
-                        If ($ModECK -eq $true){Write-ECKlog -Message $Message -type 2} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
-                    }
+                    {Write-ECKlog -Message "[Warning] No internet connection available, continuing with local version $version of $ModuleName" -type 2}
                 Else
-                    {
-                        $Message = "[ERROR] No internet connection available, unable to load module $ModuleName !!!"
-                        If ($ModECK -eq $true){Write-ECKlog -Message $Message -type 3} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
-                        Exit 1
-                    }
+                    {Write-ECKlog -Message "[ERROR] No internet connection available, unable to load module $ModuleName !!!" -type 3 ; Exit 1}
             }
 
 
@@ -64,36 +55,83 @@
                 $psgalleryversion = $psgalleryversion.version.tostring()
             }
         Else
-        {$b = "0.0" ; $psgalleryversion = "0.0.0.0"}
+            {$b = "0.0" ; $psgalleryversion = "0.0.0.0"}
 
         if ([version]"$a" -ge [version]"$b")
             {
-                $Message = "Module $ModuleName Local version [$a] is equal or greater than online version [$b], no update requiered"
-                If ($ModECK -eq $true){Write-ECKlog -Message $Message} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
+                Write-ECKlog -Message "Module $ModuleName Local version [$a] is equal or greater than online version [$b], no update requiered"
                 return [PSCustomObject]@{NeedUpdate = $False ; ModuleName = $ModuleName ; LocalVersion = $version ; OnlineVersion = $psgalleryversion}
             }
         else
             {
                 If ($b -ne "0.0")
                     {
-                        $Message =  "Module $ModuleName Local version [$a] is lower than online version [$b], Updating Module !"
-                        If ($ModECK -eq $true){Write-ECKlog -Message $Message} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
+                        Write-ECKlog -Message "Module $ModuleName Local version [$a] is lower than online version [$b], Updating Module !"
                         If ($a -eq "0.0")
-                            {Install-Module -Name $ModuleName -Force}
+                            {
+                                Try
+                                    {
+                                        Install-Module -Name $ModuleName -Force -ErrorAction Stop
+                                        Set-ItemProperty "HKLM:\SOFTWARE\ECK\DependenciesCheck" -Name $ModuleName -value $((get-date).date)
+                                    }
+                                Catch
+                                    {
+                                        If ($_.FullyQualifiedErrorId -like "*CommandAlreadyAvailable*")
+                                            {
+                                                If ($ModuleName -like "*endpointcloudkit*")
+                                                    {
+                                                        Install-Module -Name $ModuleName -Force -AllowClobber
+                                                        Write-ECKlog -Message "Overwriting another module to allow import of $ModuleName !"
+                                                    }
+                                                Else
+                                                    {Write-ECKlog -Message "Commandlet of Module $ModuleName already loaded using... ...another module, skipping import !"}
+                                            }
+                                        else
+                                            {
+                                                If ($ModuleName -like "*Endpointcloudkit*")
+                                                    {Write-ECKlog -Message "[FATAL ERROR] unable to import endpointcloudkit, Aborting !" -Type 3 ; Exit 1}
+                                                else
+                                                    {Write-ECKlog -Message  "[ERROR] unable to load Module $ModuleName, skipping import !" -type 3}
+                                            }
+                                    }
+                            }
                         Else
                             {
                                 Remove-module -Name $ModuleName -ErrorAction SilentlyContinue -Force
                                 Uninstall-Module -Name $ModuleName -AllVersions -Force -Confirm:$false -ErrorAction SilentlyContinue
                                 Install-Module -Name $ModuleName -Force
+                                Try
+                                    {
+                                        Install-Module -Name $ModuleName -Force -ErrorAction Stop
+                                        Set-ItemProperty "HKLM:\SOFTWARE\ECK\DependenciesCheck" -Name $ModuleName -value $((get-date).date)
+                                    }
+                                Catch
+                                    {
+                                        If ($_.FullyQualifiedErrorId -like "*CommandAlreadyAvailable*")
+                                            {
+                                                If ($ModuleName -like "*endpointcloudkit*")
+                                                    {
+                                                        Install-Module -Name $ModuleName -Force -AllowClobber
+                                                        Write-ECKlog -Message "Overwriting another module to allow import of $ModuleName !"
+                                                    }
+                                                Else
+                                                    {Write-ECKlog -Message  "Commandlet of Module $ModuleName already loaded using... ...another module, skipping import !"}
+                                            }
+                                        else
+                                            {
+                                                If ($ModuleName -like "*Endpointcloudkit*")
+                                                    {Write-ECKlog -Message "[FATAL ERROR] unable to import endpointcloudkit, Aborting !" -Type 3 ; Exit 1}
+                                                else
+                                                    {Write-ECKlog -Message "[ERROR] unable to load Module $ModuleName, skipping import !" -type 3}                                            }
+                                    }
                             }
-                        Set-ItemProperty "HKLM:\SOFTWARE\ECK\DependenciesCheck" -Name $ModuleName -value $((get-date).date)
+
                         return [PSCustomObject]@{NeedUpdate = $True ; ModuleName = $ModuleName ; LocalVersion = $version ; OnlineVersion = $psgalleryversion}
                     }
                 Else
                     {
-                        $message = "[ERROR] Module $ModuleName not found online, unable to download, aborting!"
-                        If ($ModECK -eq $true){Write-ECKlog -Message $Message -level 3} else {$Message|Out-file -FilePath $LogPath -Encoding UTF8 -Append -ErrorAction SilentlyContinue}
-                        return $false
+                        Write-ECKlog -Message "[ERROR] Module $ModuleName not found online, unable to download, aborting!" -type 3
+                        return [PSCustomObject]@{NeedUpdate = $Null ; ModuleName = $ModuleName ; LocalVersion = 0 ; OnlineVersion = 0}
                     }
             }
     }
