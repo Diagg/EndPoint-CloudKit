@@ -3,6 +3,7 @@
         # Version 1.1 - 16/04/2022 - Code cleanup
         # Version 1.2 - 28/04/2022 - Added support for ECK-Content
         # Version 1.3 - 03/05/2022 - Bug fix, Changed $ContentPath location and behavior, update Powershellget if needed
+        # Version 1.4 - 12/05/2022 - Bug fix, file download was not using Get-ECKGithubContent
 
         Param (
                 [String[]]$Module,                                                                              # List of module to import separated by coma
@@ -134,7 +135,7 @@
                         Try
                             {
                                 $Fileraw = Get-ECKGithubContent -URI $cript
-                                Write-ECKlog -Message "Running script $($ScriptURI.split("/")[-1]) !!!"
+                                Write-ECKlog -Message "Running script $($Script.split("/")[-1]) !!!"
                                 Invoke-expression $Fileraw -ErrorAction stop
                             }
                         Catch
@@ -145,12 +146,11 @@
                 # Download Script and store them
                 Foreach ($File in $ContentToLoad)
                     {
-                        $FiletURI = Format-GitHubURL -URI $File -LogPath $LogPath
                         Try
                             {
-                                $Fileraw = (Invoke-WebRequest -URI $FiletURI -UseBasicParsing -ErrorAction Stop).content
-                                Write-ECKlog -Message "Succesfully downloaded content to $ContentPath\$($FiletURI.split("/")[-1]) !!!"
-                                $Fileraw | Out-File -FilePath "$ContentPath\$($FiletURI.split("/")[-1])" -Encoding utf8 -force
+                                $Fileraw = Get-ECKGithubContent -URI $File
+                                Write-ECKlog -Message "Succesfully downloaded content to $ContentPath\$($File.split("/")[-1]) !!!"
+                                $Fileraw | Out-File -FilePath "$ContentPath\$($File.split("/")[-1])" -Encoding utf8 -force
                             }
                         Catch
                             {Write-ECKlog -Message "[ERROR] Unable to get content, Aborting !!!" ; Exit 1}

@@ -60,10 +60,10 @@
 
         if ([version]"$a" -ge [version]"$b")
             {
-                If (Get-Module -Name $ModuleName -lt $ModuleName)
+                If ((Get-Module -Name $ModuleName).version -lt [version]"$a")
                     {Write-ECKlog -Message "Module $ModuleName Local version [$a] is equal or greater than online version [$b], no update requiered, but module in current session is not the highest and needs to be refreshed !" ; $Iret = $True}
-                else 
-                    {Write-ECKlog -Message "Module $ModuleName Local version [$a] is equal or greater than online version [$b], no update requiered" ; $Iret = $False}                
+                else
+                    {Write-ECKlog -Message "Module $ModuleName Local version [$a] is equal or greater than online version [$b], no update requiered" ; $Iret = $False}
                 Return [PSCustomObject]@{NeedUpdate = $Iret ; ModuleName = $ModuleName ; LocalVersion = $version ; OnlineVersion = $psgalleryversion}
             }
         else
@@ -76,7 +76,7 @@
                                 Remove-module -Name $ModuleName -ErrorAction SilentlyContinue -Force
                                 Uninstall-Module -Name $ModuleName -AllVersions -Force -Confirm:$false -ErrorAction SilentlyContinue
                                 Install-Module -Name $ModuleName -Force
-                            } 
+                            }
 
                         Try
                             {
