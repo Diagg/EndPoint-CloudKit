@@ -4,6 +4,7 @@
         # Version 1.2 - 28/04/2022 - Added support for ECK-Content
         # Version 1.3 - 03/05/2022 - Bug fix, Changed $ContentPath location and behavior, update Powershellget if needed
         # Version 1.4 - 12/05/2022 - Bug fix, file download was not using Get-ECKGithubContent
+        # Version 1.5 - 22/05/2022 - Changed Logging messages on external downloads
 
         Param (
                 [String[]]$Module,                                                                              # List of module to import separated by coma
@@ -116,18 +117,35 @@
 
                 ##Install Hiddenw.exe
                 $PowershellwPath = 'C:\Windows\System32\WindowsPowerShell\v1.0\Powershellw.exe'
-                If (-not (test-path $PowershellwPath)){Invoke-WebRequest -Uri 'https://github.com/SeidChr/RunHiddenConsole/releases/download/1.0.0-alpha.2/hiddenw.exe' -OutFile $PowershellwPath -ErrorAction SilentlyContinue}
-                If (test-path $PowershellwPath){Write-ECKlog -Message "Successfully Downloaded $PowershellwPath !"}
+                If (-not (test-path $PowershellwPath))
+                    {
+                        Invoke-WebRequest -Uri 'https://github.com/SeidChr/RunHiddenConsole/releases/download/1.0.0-alpha.2/hiddenw.exe' -OutFile $PowershellwPath -ErrorAction SilentlyContinue
+                        If (test-path $PowershellwPath){Write-ECKlog -Message "Successfully Downloaded $PowershellwPath !"} Else {Write-ECKlog -Message "[ERROR] Unable to download $PowershellwPath !"}
+                    }
+                else 
+                    {Write-ECKlog -Message "$PowershellwPath Already downloaded!"}
 
                 ##Install SerciceUI_X64.exe
                 $SrvUIPath = 'C:\Windows\System32\ServiceUI.exe'
-                If (-not (test-path $SrvUIPath)){Invoke-WebRequest -Uri $(Format-GitHubURL 'https://github.com/Diagg/EndPoint-CloudKit-Bootstrap/blob/master/ServiceUI/ServiceUI_x64.exe') -OutFile $SrvUIPath -ErrorAction SilentlyContinue}
-                If (test-path $SrvUIPath){Write-ECKlog -Message "Successfully Downloaded $SrvUIPath !"}
+                If (-not (test-path $SrvUIPath))
+                    {
+                        Invoke-WebRequest -Uri $(Format-GitHubURL 'https://github.com/Diagg/EndPoint-CloudKit-Bootstrap/blob/master/ServiceUI/ServiceUI_x64.exe') -OutFile $SrvUIPath -ErrorAction SilentlyContinue
+                        If (test-path $SrvUIPath){Write-ECKlog -Message "Successfully Downloaded $SrvUIPath !"} Else {Write-ECKlog -Message "[ERROR] Unable to download $SrvUIPath !"}
+                    }
+                else 
+                    {Write-ECKlog -Message "$SrvUIPath Already downloaded!"}                    
+                
 
                 ##Install SerciceUI_X86.exe
                 $SrvUIPath = 'C:\Windows\SysWOW64\ServiceUI.exe'
-                If (-not (test-path $SrvUIPath)){Invoke-WebRequest -Uri $(Format-GitHubURL 'https://github.com/Diagg/EndPoint-CloudKit-Bootstrap/blob/master/ServiceUI/ServiceUI_x86.exe') -OutFile $SrvUIPath -ErrorAction SilentlyContinue}
-                If (test-path $SrvUIPath){Write-ECKlog -Message "Successfully Downloaded $SrvUIPath !"}
+                If (-not (test-path $SrvUIPath))
+                    {
+                        Invoke-WebRequest -Uri $(Format-GitHubURL 'https://github.com/Diagg/EndPoint-CloudKit-Bootstrap/blob/master/ServiceUI/ServiceUI_x86.exe') -OutFile $SrvUIPath -ErrorAction SilentlyContinue
+                        If (test-path $SrvUIPath){Write-ECKlog -Message "Successfully Downloaded $SrvUIPath !"} Else {Write-ECKlog -Message "[ERROR] Unable to download $SrvUIPath !"}                       
+                    }
+                else 
+                    {Write-ECKlog -Message "$SrvUIPath Already downloaded!"}                      
+
 
                 # Download Script and execute
                 Foreach ($cript in $ScriptToImport)

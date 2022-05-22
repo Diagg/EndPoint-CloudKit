@@ -2,6 +2,7 @@
     {
         # Version 2.0 - 05/04/2022 - fixed a lot of bugs
         # Version 2.1 - 20/04/2022 - Start Time is now embedded in user script
+        # Version 2.2 - 22/05/2022 - Time before reboot set to 0
 
         Param
             (
@@ -15,7 +16,7 @@
                 [ValidateSet("top","TOP","Top","bottom","BOTTOM","Bottom")]
                 [String]$ImagePosition = "top",
                 [Parameter(Mandatory = $false)]
-                [ValidateSet("Default","DEFAULT","Default","reminder","REMINDER","Reminder")]
+                [ValidateSet("default","DEFAULT","Default","reminder","REMINDER","Reminder")]
                 [String]$ToastScenario = "reminder",
                 [Parameter(Mandatory = $false)]
                 [String]$ToastTitle = "Reboot requiered",
@@ -48,7 +49,7 @@
                 [HashTable]$Buttons = @{'Reboot Now' = @('rebootnow','protocol',"$ActionFld\Button1.ps1") ; "Snooze ($RepeatInterval Mins)" = @('dismiss','system','') ; 'Button3' = @('','','')}
                 $script_Button1 = @"
                     Get-ScheduledTask -TaskName $OldTaskName -ErrorAction SilentlyContinue|Unregister-ScheduledTask -Confirm:`$false -ErrorAction SilentlyContinue
-                    shutdown /g /t 240
+                    shutdown /g /t 0
 "@
                 $script_Button1|Out-File -FilePath "$ActionFld\Button1.ps1" -Encoding default -width 1000
             }
