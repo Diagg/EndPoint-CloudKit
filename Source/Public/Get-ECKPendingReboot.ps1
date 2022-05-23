@@ -2,6 +2,7 @@
     {
         # Version 1.1 - 13/04/2022 - Added support for Endpoint Cloud Kit own pending reboot
         # Version 1.2 - 13/04/2022 - Pending Reboot state is now included in $ECK environment variable
+        # Version 1.3 - 23/05/2022 - Fixed a bug where parameter SkipfileRename was ignored !
 
         Param([switch]$SKipFileRename)
 
@@ -26,9 +27,12 @@
                     {
                         ForEach ($Item in $($pendingTable[$Hash]).Split(";"))
                             {
-                                try {Get-ItemProperty -Path $Hash -name $item -ErrorAction Stop | Out-Null; $PendingReboot = $true ; Break}
+                                try {
+                                        Get-ItemProperty -Path $Hash -name $item -ErrorAction Stop | Out-Null
+                                        If ($SKipFileRename -and $item -like "*PendingFileRenameOperations*"){$PendingReboot = $false} Else {$PendingReboot = $true ; Break}
+                                         
+                                    }
                                 catch {$PendingReboot = $false}
-                                If ($SKipFileRename -and $item -like "*PendingFileRenameOperations*" -and $PendingReboot -eq $true){$PendingReboot = $false}
                             }
                     }
             }

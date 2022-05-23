@@ -25,9 +25,9 @@
 
         If ($ECK.UserIsAdmin -eq $false -and $ECK.UserIsSystem -eq $false)
             {Invoke-ECKScheduledTask -TaskName $taskName -ScriptPath $ECK.ScriptFullName -AtLogon -Context User -AllowUsersFullControl}
-        ElseIf ($ECK.UserIsAdmin -eq $true -and $Context.UserIsSystem -eq $false)
+        ElseIf ($ECK.UserIsAdmin -eq $true -and $ECK.UserIsSystem -eq $false)
             {Invoke-ECKScheduledTask -TaskName $taskName -ScriptPath $ECK.ScriptFullName -AtLogon -Context Admin}
-        ElseIf ($Context.UserIsSystem -eq $True)
+        ElseIf ($ECK.UserIsSystem -eq $True)
             {Invoke-ECKScheduledTask -TaskName $taskName -ScriptPath $ECK.ScriptFullName -AtLogon -Context system}
 
         # Set Reboot Counter

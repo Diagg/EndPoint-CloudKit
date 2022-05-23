@@ -206,5 +206,5 @@
         # Schedule Task
         Get-ScheduledTask -TaskName $OldTaskName -ErrorAction SilentlyContinue|Unregister-ScheduledTask -Confirm:$false -ErrorAction SilentlyContinue
         $trigger = New-ScheduledTaskTrigger -RepetitionInterval $(New-TimeSpan -Minutes $RepeatInterval) -At $((Get-Date).AddSeconds(5).ToString('s')) -Once
-        Invoke-ECKScheduledTask -TaskName $TaskName -ScriptBlock $script_Notif -Context user -triggerObject $Trigger -DontAutokilltask -AllowUsersFullControl -now
+        Invoke-ECKScheduledTask -TaskName $TaskName -ScriptBlock $script_Notif -Context user -triggerObject $Trigger -DontAutokilltask -AllowUsersFullControl
     }
