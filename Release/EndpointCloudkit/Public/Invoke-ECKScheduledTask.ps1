@@ -7,6 +7,7 @@
         # Version 3.8 - 05/04/2022 - ServiceUI is seeked in different location, thanks to Bertrand J.
         # Version 3.9 - 07/04/2022 - Added WaitFinised switch to allow tracking of the running task. also cast out return code.
         # Version 3.10 - 12/04/2022 - Added log warning if interactive commande contains spaces
+        # Version 3.11 - 22/05/2022 - Fixed an issue where a task that should run now is executed twice, Now parameter is deprecated
 
 
         [CmdletBinding()]
@@ -28,14 +29,14 @@
             [String]$Context = "System",
             [String]$TaskNamePrefix = "ECK",
             [string]$Description = "Scheduled task created from Powershell by ECK Module",
-            [switch]$now,
+            [switch]$now, #Deprecated as default execution time is now.
             [switch]$Interactive,
             [switch]$AtStartup, #Machine
             [switch]$AtLogon, #User
             [switch]$DontAutokilltask,
             [Switch]$WaitFinished, # wait for planed task to finish, and return exit code, works only with 'now' switch
             [Int]$WaitFinshedTimeout = 3600, # Default time out (in second) before stopping to wait after running task
-            [int]$DefaultTaskExpiration = 120, # Default wait time before removing task after execution (expressed in second)
+            [int]$DefaultTaskExpiration = 60, # Default time before disabling a trigger (expressed in second)
             [Switch]$NormalTaskName, #TaskName created without prefix and random GUID
             [Switch]$AllowUsersFullControl, #allow user to delete his own task
             [Switch]$ForceStandardPSConsole, #force use of Powershell.exe instead of Powershellw.exe
@@ -49,7 +50,6 @@
             {
                 #Created Scheduled Task
                 $ToastGUID = ([guid]::NewGuid()).ToString().ToUpper()
-                $Task_TimeToRun = (Get-Date).AddSeconds(5).ToString('s')
                 $Task_Expiry = (Get-Date).AddSeconds($DefaultTaskExpiration).ToString('s')
 
                 #Check interactive prereqs
@@ -98,20 +98,24 @@
 
 
                 If ($triggerObject)
-                    {$Task_Trigger = $triggerObject}
-                elseif ($AtStartup)
+                    {
+                        $Task_Trigger = $triggerObject
+                        $Now = $False
+                    }
+                Elseif ($AtStartup.IsPresent)
                     {$Task_Trigger = New-ScheduledTaskTrigger -AtStartup ; $DontAutokilltask = $True}
-                elseif ($AtLogon)
+                Elseif ($AtLogon.IsPresent)
                     {$Task_Trigger = New-ScheduledTaskTrigger -AtLogOn ; $DontAutokilltask = $True}
                 Else
-                    {$Task_Trigger = New-ScheduledTaskTrigger -Once -At $Task_TimeToRun}
+                    {$Task_Trigger = New-ScheduledTaskTrigger -Once -At $((Get-Date).AddSeconds(5).ToString('s'))}
 
                 If ($DontAutokilltask.IsPresent -or $WaitFinished.IsPresent)
                     {$Task_Settings = New-ScheduledTaskSettingsSet -Compatibility Win8 -AllowStartIfOnBatteries -StartWhenAvailable}
                 Else
                     {
                         $Task_Trigger.EndBoundary = $Task_Expiry
-                        $Task_Settings = New-ScheduledTaskSettingsSet -Compatibility Win8 -DeleteExpiredTaskAfter (New-TimeSpan -Seconds 600) -AllowStartIfOnBatteries -StartWhenAvailable
+                        $Task_Settings = New-ScheduledTaskSettingsSet -Compatibility Win8 -DeleteExpiredTaskAfter (New-TimeSpan -Seconds 30) -AllowStartIfOnBatteries -StartWhenAvailable
+                        $Now = $True
                     }
 
 
@@ -209,12 +213,22 @@
                     }
 
 
-                If ($now)
+                If ($now -eq $true)
                     {
-                        Start-ScheduledTask -TaskName $TaskFullName|Out-Null
-
+                        ## Check if task as started
                         $Count = 0
-                        While((Get-ScheduledTask $TaskFullName -ErrorAction SilentlyContinue).State -ne 'Running' -and $count -le 8){Start-Sleep -Seconds 1 ; $Count +=1 }
+                        While((Get-ScheduledTask $TaskFullName -OutVariable RunningTsk -ErrorAction SilentlyContinue).State -ne 'Running' -and $count -le 8){Start-Sleep -Seconds 1 ; $Count +=1 }
+
+                        ## Force Execution if not stated yet
+                        If ($RunningTsk.state -ne 'Running')
+                            {
+                                Write-ECKLog "Windows trigger system  failed to launch task (may happens sometimes...), forcing execution !"
+                                Start-ScheduledTask -TaskName $TaskFullName|Out-Null
+                                $Count = 0
+                                While((Get-ScheduledTask $TaskFullName -OutVariable RunningTsk -ErrorAction SilentlyContinue).State -ne 'Running' -and $count -le 8){Start-Sleep -Seconds 1 ; $Count +=1 }
+                            }
+
+                        ##
                         try
                             {
                                 Get-ScheduledTask $TaskFullName -ErrorAction Stop|Out-Null
@@ -229,6 +243,7 @@
                                             }
 
                                         [int]$Runingtask = (Get-ScheduledTaskInfo -TaskName $TaskFullName).LastTaskResult
+                                        Write-ECKLog "Task $TaskFullName execution finished with return code $Runingtask !"
                                     }
                             }
                         Catch {Write-ECKLog "[ERROR] Unable to Launch Task $TaskFullName in $context context !" -Type 3}
@@ -237,8 +252,6 @@
                     }
                 Else
                     {Write-ECKLog "Task $TaskFullName scheduled sucessfully in $context context with a custom planed execution."}
-
-                If ($Runingtask){$Runingtask} Else {Write-Output $TaskFullName}
             }
         Catch
             {

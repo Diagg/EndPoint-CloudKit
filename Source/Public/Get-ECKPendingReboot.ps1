@@ -30,7 +30,7 @@
                                 try {
                                         Get-ItemProperty -Path $Hash -name $item -ErrorAction Stop | Out-Null
                                         If ($SKipFileRename -and $item -like "*PendingFileRenameOperations*"){$PendingReboot = $false} Else {$PendingReboot = $true ; Break}
-                                         
+
                                     }
                                 catch {$PendingReboot = $false}
                             }

@@ -7,7 +7,7 @@
         # Version 3.8 - 05/04/2022 - ServiceUI is seeked in different location, thanks to Bertrand J.
         # Version 3.9 - 07/04/2022 - Added WaitFinised switch to allow tracking of the running task. also cast out return code.
         # Version 3.10 - 12/04/2022 - Added log warning if interactive commande contains spaces
-        # Version 3.11 - 22/05/2022 - Fixed an issue where a task that should run now is executed twice, Now parameter is deprecated        
+        # Version 3.11 - 22/05/2022 - Fixed an issue where a task that should run now is executed twice, Now parameter is deprecated
 
 
         [CmdletBinding()]
@@ -218,7 +218,7 @@
                         ## Check if task as started
                         $Count = 0
                         While((Get-ScheduledTask $TaskFullName -OutVariable RunningTsk -ErrorAction SilentlyContinue).State -ne 'Running' -and $count -le 8){Start-Sleep -Seconds 1 ; $Count +=1 }
-                        
+
                         ## Force Execution if not stated yet
                         If ($RunningTsk.state -ne 'Running')
                             {
@@ -227,8 +227,8 @@
                                 $Count = 0
                                 While((Get-ScheduledTask $TaskFullName -OutVariable RunningTsk -ErrorAction SilentlyContinue).State -ne 'Running' -and $count -le 8){Start-Sleep -Seconds 1 ; $Count +=1 }
                             }
-                        
-                        ## 
+
+                        ##
                         try
                             {
                                 Get-ScheduledTask $TaskFullName -ErrorAction Stop|Out-Null

@@ -122,7 +122,7 @@
                         Invoke-WebRequest -Uri 'https://github.com/SeidChr/RunHiddenConsole/releases/download/1.0.0-alpha.2/hiddenw.exe' -OutFile $PowershellwPath -ErrorAction SilentlyContinue
                         If (test-path $PowershellwPath){Write-ECKlog -Message "Successfully Downloaded $PowershellwPath !"} Else {Write-ECKlog -Message "[ERROR] Unable to download $PowershellwPath !"}
                     }
-                else 
+                else
                     {Write-ECKlog -Message "$PowershellwPath Already downloaded!"}
 
                 ##Install SerciceUI_X64.exe
@@ -132,19 +132,19 @@
                         Invoke-WebRequest -Uri $(Format-GitHubURL 'https://github.com/Diagg/EndPoint-CloudKit-Bootstrap/blob/master/ServiceUI/ServiceUI_x64.exe') -OutFile $SrvUIPath -ErrorAction SilentlyContinue
                         If (test-path $SrvUIPath){Write-ECKlog -Message "Successfully Downloaded $SrvUIPath !"} Else {Write-ECKlog -Message "[ERROR] Unable to download $SrvUIPath !"}
                     }
-                else 
-                    {Write-ECKlog -Message "$SrvUIPath Already downloaded!"}                    
-                
+                else
+                    {Write-ECKlog -Message "$SrvUIPath Already downloaded!"}
+
 
                 ##Install SerciceUI_X86.exe
                 $SrvUIPath = 'C:\Windows\SysWOW64\ServiceUI.exe'
                 If (-not (test-path $SrvUIPath))
                     {
                         Invoke-WebRequest -Uri $(Format-GitHubURL 'https://github.com/Diagg/EndPoint-CloudKit-Bootstrap/blob/master/ServiceUI/ServiceUI_x86.exe') -OutFile $SrvUIPath -ErrorAction SilentlyContinue
-                        If (test-path $SrvUIPath){Write-ECKlog -Message "Successfully Downloaded $SrvUIPath !"} Else {Write-ECKlog -Message "[ERROR] Unable to download $SrvUIPath !"}                       
+                        If (test-path $SrvUIPath){Write-ECKlog -Message "Successfully Downloaded $SrvUIPath !"} Else {Write-ECKlog -Message "[ERROR] Unable to download $SrvUIPath !"}
                     }
-                else 
-                    {Write-ECKlog -Message "$SrvUIPath Already downloaded!"}                      
+                else
+                    {Write-ECKlog -Message "$SrvUIPath Already downloaded!"}
 
 
                 # Download Script and execute

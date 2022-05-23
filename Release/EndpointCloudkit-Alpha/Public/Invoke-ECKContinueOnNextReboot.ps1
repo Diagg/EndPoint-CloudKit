@@ -2,6 +2,7 @@
     {
         # version 2.0
         # version 3.0 - 26/04/2022 - big code refactoring/cleanup, a lot of legacy code and prameters removed
+        # version 4.0 - 21/05/2022 - Now use $ECK variable
         Param
             (
                 [Parameter(Mandatory = $false)]
@@ -22,11 +23,11 @@
 
         $taskName = "ContinueOnReboot"
 
-        If ($ECK.UserIsAdmin -eq $false -and $ECK.RunAsSystem -eq $false)
+        If ($ECK.UserIsAdmin -eq $false -and $ECK.UserIsSystem -eq $false)
             {Invoke-ECKScheduledTask -TaskName $taskName -ScriptPath $ECK.ScriptFullName -AtLogon -Context User -AllowUsersFullControl}
-        ElseIf ($Context.UserIsAdmin -eq $true -and $Context.RunAsSystem -eq $false)
+        ElseIf ($ECK.UserIsAdmin -eq $true -and $ECK.UserIsSystem -eq $false)
             {Invoke-ECKScheduledTask -TaskName $taskName -ScriptPath $ECK.ScriptFullName -AtLogon -Context Admin}
-        ElseIf ($Context.RunAsSystem -eq $True)
+        ElseIf ($ECK.UserIsSystem -eq $True)
             {Invoke-ECKScheduledTask -TaskName $taskName -ScriptPath $ECK.ScriptFullName -AtLogon -Context system}
 
         # Set Reboot Counter
