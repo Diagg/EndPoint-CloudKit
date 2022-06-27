@@ -8,6 +8,7 @@
         # Version 3.9 - 07/04/2022 - Added WaitFinised switch to allow tracking of the running task. also cast out return code.
         # Version 3.10 - 12/04/2022 - Added log warning if interactive commande contains spaces
         # Version 3.11 - 22/05/2022 - Fixed an issue where a task that should run now is executed twice, Now parameter is deprecated
+        # Version 3.12 - 23/05/2022 - task with custom trigger are now evaluated to check if they should run 'now'
 
 
         [CmdletBinding()]
@@ -29,7 +30,7 @@
             [String]$Context = "System",
             [String]$TaskNamePrefix = "ECK",
             [string]$Description = "Scheduled task created from Powershell by ECK Module",
-            [switch]$now, #Deprecated as default execution time is now.
+            [switch]$now, #Deprecated, only left for backward compatibility.
             [switch]$Interactive,
             [switch]$AtStartup, #Machine
             [switch]$AtLogon, #User
@@ -100,7 +101,9 @@
                 If ($triggerObject)
                     {
                         $Task_Trigger = $triggerObject
-                        $Now = $False
+                        $triggerToLocal = ([DateTime]$($Task_Trigger.StartBoundary)).ToLocalTime() # Convert Zulu time (UTC) to local
+                        $triggerInterval = $triggerToLocal - $(get-date) # calculate interval
+                        If($triggerInterval -lt $(New-TimeSpan -Seconds 5)) {$Now = $True} Else {$Now = $False} # if interval is less than 5 sec. the the task will run 'Now'!
                     }
                 Elseif ($AtStartup.IsPresent)
                     {$Task_Trigger = New-ScheduledTaskTrigger -AtStartup ; $DontAutokilltask = $True}
