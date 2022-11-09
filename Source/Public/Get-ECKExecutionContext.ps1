@@ -42,7 +42,7 @@
 
                         ForEach ($item in $UPNKeys)
                             {
-                                $UPN = $HKLM64Key.OpenSubKey("SOFTWARE\Microsoft\IdentityStore\LogonCache\$($subkeys[0])\Sid2Name\$CurrentUserID").getvalue("IdentityName")
+                                $UPN = $HKLM64Key.OpenSubKey("SOFTWARE\Microsoft\IdentityStore\LogonCache\$item\Sid2Name\$CurrentUserID").getvalue("IdentityName")
                                 If (-not ([String]::IsNullOrWhiteSpace($UPN))){$CurrentUserUPN = $UPN ; Break} Else {$CurrentUserUPN = "#NotAvailable#"}
                             }
 
