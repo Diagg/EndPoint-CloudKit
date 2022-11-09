@@ -1,5 +1,8 @@
 ﻿Function Get-ECKGithubContent
     {
+        
+        # Script Version 1.1 - 27/06/2022 - Fixed access to Raw Gist
+
         param(
 
             [Parameter(Mandatory = $true, Position=0, ParameterSetName = 'Public')]
@@ -14,22 +17,16 @@
         If([string]::IsNullOrWhiteSpace($GithubToken))
             {
                 ## This a public Repo/Gist
+                If(-not (($URI -like '*//gist.github.com*') -or ($URI -like '*//gist.githubusercontent.com*') -or ($URI -like '*//github.com*'))){Write-ECKlog "[ERROR] Unsupported URI $URI, Aborting !!!" -Type 3 ; Return $false}
+                
+                If($URI -like '*/github.com*'){$URI = $URI -replace "blob/","raw/"} # This is a Github Repo
 
-                If($URI -like '*/gist.github.com*') ##This is a Gist
+                If ($URI -like '*//gist.github.com*') # this is a gist
                     {
-                        $URI = $URI.replace("gist.github.com","gist.githubusercontent.com")
-                        If ($URI.Split("/")[$_.count-1] -notlike '*raw*'){$URI = "$URI/raw"}
+                        $Content = Invoke-WebRequest -Uri $URI -UseBasicParsing -ErrorAction Stop
+                        $URI = "https://gist.githubusercontent.com" + $($content.Links|Where-Object outerHTML -match "Raw" |Select-Object -ExpandProperty href)
                     }
-                ElseIf($URI -like '*/github.com*') ##This is a Github repo
-                    {$URI = $URI -replace "blob/","raw/"}
-                Else
-                    {
-                        If ($URI -notlike "*//gist.githubusercontent.com*")
-                            {
-                                Write-ECKlog "[ERROR] Unsupported URI $URI, Aborting !!!" -Type 3
-                                Return $false
-                            }
-                    }
+
 
                 Try
                     {
