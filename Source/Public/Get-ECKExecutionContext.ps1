@@ -6,6 +6,7 @@
         # Version 1.5 - 01/04/2020 - added Current logged on user registry key, Fixed bugs
         # Version 1.6 - 04/04/2022 - Added support For New-ECKEnvironment.
         # Version 1.7 - 26/04/2022 - Log file is no more managed by this function
+        # Version 1.8 - 09/11/2022 - replacing reg.exe to query x64 registry with .Net method (reg.exe excution can be blocked by security policies)        
 
         Try
             {
@@ -36,15 +37,15 @@
                         If($null -eq $CurrentUserID){$CurrentUserID = (New-Object System.Security.Principal.NTAccount($CurrentUser)).Translate([System.Security.Principal.SecurityIdentifier]).Value}
                         If($null -eq $CurrentUserProfile){$CurrentUserProfile = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList'|Where-Object {$PSItem.pschildname -eq $CurrentUserID}|Get-ItemPropertyValue -Name PRofileImagePath}
 
-                        $ErrSetting = $ErrorActionPreference
-                        $ErrorActionPreference = 'SilentlyContinue'
-                        $UPNKeys = $(reg query hklm\SOFTWARE\Microsoft\IdentityStore\LogonCache /reg:64).Split([Environment]::NewLine)| Where-Object{$_ -ne ""}
+                        $HKLM64Key = [Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]::LocalMachine, [Microsoft.Win32.RegistryView]::Registry64)
+                        $UPNKeys =  $HKLM64Key.OpenSubKey("SOFTWARE\Microsoft\IdentityStore\LogonCache").getsubkeynames()                       
+
                         ForEach ($item in $UPNKeys)
                             {
-                                $UPN = reg @('query',"$item\Sid2Name\$CurrentUserID",'/v','IdentityName','/reg:64')
-                                If ($LASTEXITCODE -eq 0){$CurrentUserUPN = ($UPN[2] -split ' {2,}')[3] ; Break} Else {$CurrentUserUPN = "#NotAvailable#"}
+                                $UPN = $HKLM64Key.OpenSubKey("SOFTWARE\Microsoft\IdentityStore\LogonCache\$($subkeys[0])\Sid2Name\$CurrentUserID").getvalue("IdentityName")
+                                If (-not ([String]::IsNullOrWhiteSpace($UPN))){$CurrentUserUPN = $UPN ; Break} Else {$CurrentUserUPN = "#NotAvailable#"}
                             }
-                        $ErrorActionPreference = $ErrSetting
+
 
                         ##== Mount HKU reg Key in PSdrive
                         If([string]::IsNullOrWhiteSpace($(Get-PSDrive -Name HKU -ErrorAction SilentlyContinue))){New-PSDrive -PSProvider Registry -Name HKU -Root HKEY_USERS -Scope global| out-null}
@@ -53,11 +54,11 @@
             }
         Catch
             {
-                $CurrentUser = "#NotAvailable#"
-                $CurrentUserID = "#NotAvailable#"
-                $CurrentUserProfile = "#NotAvailable#"
-                $CurrentUserUPN = "#NotAvailable#"
-                $CurrentUserReg = "#NotAvailable#"
+                if ([sting]::IsNullOrWhiteSpace($CurrentUser)){$CurrentUser = "#NotAvailable#"}
+                if ([sting]::IsNullOrWhiteSpace($CurrentUserID)){$CurrentUserID = "#NotAvailable#"}
+                if ([sting]::IsNullOrWhiteSpace($CurrentUserProfile)){$CurrentUserProfile = "#NotAvailable#"}
+                if ([sting]::IsNullOrWhiteSpace($CurrentUserUPN)){$CurrentUserUPN = "#NotAvailable#"}
+                if ([sting]::IsNullOrWhiteSpace($CurrentUserReg)){$CurrentUserReg = "#NotAvailable#"}
             }
 
         Write-ECKLog "Logged on user is: $CurrentUser"
