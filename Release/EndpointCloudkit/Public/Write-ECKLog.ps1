@@ -6,6 +6,7 @@
         # Version 1.6   - 25/02/2022 - Bug fix: you could not write only event
         # Version 1.7   - 05/04/2022 - Added support for New-ECKEnvironment
         # Version 1.8   - 26/04/2022 - Bug fix: parameter EventLogOnly is now functional
+        # Version 1.9   - 27/06/2022 - No more fatal error if unable to write to log file
 
         [CmdletBinding()]
         [Alias('Write-Log')]
@@ -34,7 +35,12 @@
         $Content = "$oDate $oHour, $($MessageType[$type]) $Tab $($Message -replace "`r`n", ", ")"
 
         # Write the line to the log file and to the console
-        If (-not $EventLogOnly.IsPresent){$Content| Out-file -FilePath $Path -Encoding UTF8 -Append -width 1000 -ErrorAction SilentlyContinue}
+        If (-not $EventLogOnly.IsPresent)
+            {
+                Try{$Content| Out-file -FilePath $Path -Encoding UTF8 -Append -width 1000 -ErrorAction SilentlyContinue}
+                Catch{If ($OutputToConsole -eq $true){Write-host "[WARNING] Could not write to log file $Path"}}
+            }
+
         If ($OutputToConsole -eq $true){Write-host $Content}
 
         # Write to Event log

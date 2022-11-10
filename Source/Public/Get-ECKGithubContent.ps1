@@ -1,6 +1,6 @@
 ﻿Function Get-ECKGithubContent
     {
-        
+
         # Script Version 1.1 - 27/06/2022 - Fixed access to Raw Gist
 
         param(
@@ -18,7 +18,7 @@
             {
                 ## This a public Repo/Gist
                 If(-not (($URI -like '*//gist.github.com*') -or ($URI -like '*//gist.githubusercontent.com*') -or ($URI -like '*//github.com*'))){Write-ECKlog "[ERROR] Unsupported URI $URI, Aborting !!!" -Type 3 ; Return $false}
-                
+
                 If($URI -like '*/github.com*'){$URI = $URI -replace "blob/","raw/"} # This is a Github Repo
 
                 If ($URI -like '*//gist.github.com*') # this is a gist

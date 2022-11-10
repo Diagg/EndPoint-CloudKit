@@ -9,6 +9,7 @@
         # Version 3.10 - 12/04/2022 - Added log warning if interactive commande contains spaces
         # Version 3.11 - 22/05/2022 - Fixed an issue where a task that should run now is executed twice, Now parameter is deprecated
         # Version 3.12 - 23/05/2022 - task with custom trigger are now evaluated to check if they should run 'now'
+        # Version 3.13 - 10/11/2022 - Fixed a bug in task monitoring, forced task execution twice !
 
 
         [CmdletBinding()]
@@ -220,22 +221,20 @@
                     {
                         ## Check if task as started
                         $Count = 0
-                        While((Get-ScheduledTask $TaskFullName -OutVariable RunningTsk -ErrorAction SilentlyContinue).State -ne 'Running' -and $count -le 8){Start-Sleep -Seconds 1 ; $Count +=1 }
+                        While([string]::IsNullOrWhiteSpace((Get-ScheduledTaskInfo -TaskName $TaskFullName).lastruntime) -and $count -le 8){Start-Sleep -Seconds 1 ; $Count +=1 }
 
                         ## Force Execution if not stated yet
-                        If ($RunningTsk.state -ne 'Running')
+                        If ([string]::IsNullOrWhiteSpace((Get-ScheduledTaskInfo -TaskName $TaskFullName).lastruntime))
                             {
                                 Write-ECKLog "Windows trigger system  failed to launch task (may happens sometimes...), forcing execution !"
                                 Start-ScheduledTask -TaskName $TaskFullName|Out-Null
-                                $Count = 0
-                                While((Get-ScheduledTask $TaskFullName -OutVariable RunningTsk -ErrorAction SilentlyContinue).State -ne 'Running' -and $count -le 8){Start-Sleep -Seconds 1 ; $Count +=1 }
+                                Start-Sleep -Seconds 4
                             }
 
                         ##
                         try
                             {
-                                Get-ScheduledTask $TaskFullName -ErrorAction Stop|Out-Null
-                                Write-ECKLog "Task $TaskFullName now launched in $context context !"
+                                Write-ECKLog "Task $TaskFullName successfully Launched at $((Get-ScheduledTaskInfo -TaskName $TaskFullName).lastruntime) in $context context !"
 
                                 If ($WaitFinished.IsPresent)
                                     {

@@ -6,7 +6,7 @@
         # Version 1.5 - 01/04/2020 - added Current logged on user registry key, Fixed bugs
         # Version 1.6 - 04/04/2022 - Added support For New-ECKEnvironment.
         # Version 1.7 - 26/04/2022 - Log file is no more managed by this function
-        # Version 1.8 - 09/11/2022 - replacing reg.exe to query x64 registry with .Net method (reg.exe excution can be blocked by security policies)        
+        # Version 1.8 - 09/11/2022 - replacing reg.exe to query x64 registry with .Net method (reg.exe excution can be blocked by security policies)
 
         Try
             {
@@ -38,7 +38,7 @@
                         If($null -eq $CurrentUserProfile){$CurrentUserProfile = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList'|Where-Object {$PSItem.pschildname -eq $CurrentUserID}|Get-ItemPropertyValue -Name PRofileImagePath}
 
                         $HKLM64Key = [Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]::LocalMachine, [Microsoft.Win32.RegistryView]::Registry64)
-                        $UPNKeys =  $HKLM64Key.OpenSubKey("SOFTWARE\Microsoft\IdentityStore\LogonCache").getsubkeynames()                       
+                        $UPNKeys =  $HKLM64Key.OpenSubKey("SOFTWARE\Microsoft\IdentityStore\LogonCache").getsubkeynames()
 
                         ForEach ($item in $UPNKeys)
                             {
