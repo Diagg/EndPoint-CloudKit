@@ -7,7 +7,6 @@
         # Version 1.5 - 22/05/2022 - Changed Logging messages on external downloads
         # Version 1.6 - 24/06/2022 - Added logic to logpath
         # Version 1.7 - 27/06/2022 - Added support fot Trevor Jones's Gist script New-WPFMessageBox
-        # Version 1.8 - 10/11/2022 - Removed support fot Trevor Jones's Gist script New-WPFMessageBox
 
         Param (
                 [String[]]$Module,                                                                              # List of module to import separated by coma
@@ -162,8 +161,8 @@
                     {Write-ECKlog -Message "$SrvUIPath Already downloaded!" -Path $LogPath}
 
                 # Add mandatory Scripts
-                #$Script_newwpfmessagebox = 'https://gist.github.com/SMSAgentSoftware/0c0eee98a673b6ac34f5215ea6841beb#file-new-wpfmessagebox'
-                #If ($Script_newwpfmessagebox -notin $ScriptToImport){$ScriptToImport += $Script_newwpfmessagebox ; $ScriptToImport = $ScriptToImport|Sort-Object -Descending}
+                $Script_newwpfmessagebox = 'https://gist.github.com/SMSAgentSoftware/0c0eee98a673b6ac34f5215ea6841beb#file-new-wpfmessagebox'
+                If ($Script_newwpfmessagebox -notin $ScriptToImport){$ScriptToImport += $Script_newwpfmessagebox ; $ScriptToImport = $ScriptToImport|Sort-Object -Descending}
 
                 # Download Script and execute
                 Foreach ($cript in $ScriptToImport)

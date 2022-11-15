@@ -7,10 +7,12 @@
         # Version 1.5 - 22/04/2022 - Added Hostname, Ip Address, OS Architecture, OS version
         # Version 1.6 - 26/04/2022 - Detection is now done in full scope by default. FullGather parameter is removed
         # Version 1.7 - 28/04/2022 - Added parameter $ContentPath, added ContentPath in $ECK object
+        # Version 1.8 - 15/11/2022 - Added SkipPendingRename parameter
 
         Param (
                     [string]$LogPath = "C:\Windows\Logs\ECK",
-                    [string]$ContentPath = 'C:\ProgramData\ECK-Content'
+                    [string]$ContentPath = 'C:\ProgramData\ECK-Content',
+                    [switch]$SkipPendingRename 
                 )
 
         Remove-Variable ECK -Scope global -ErrorAction SilentlyContinue -force
@@ -39,10 +41,11 @@
                 OSBuild = $((Get-ItemProperty 'HKLM:SOFTWARE\Microsoft\Windows NT\CurrentVersion').CurrentBuild)
             }
 
+        Write-ECKlog "ECK Module version is: $($ECK.ModVersion)"
         Write-ECKlog "Script Path is: $($ECK.ScriptFullName)"
         Write-ECKlog "Log Path is: $($ECK.LogFullName)"
 
         Get-ECKExecutionContext
         $ECK|Add-Member -MemberType NoteProperty -Name 'OsFriendlyName' -Value $(Get-ECKOsFriendlyName)
-        Get-ECKPendingReboot|Out-Null
+        Get-ECKPendingReboot -SKipFileRename $SkipPendingRename
     }

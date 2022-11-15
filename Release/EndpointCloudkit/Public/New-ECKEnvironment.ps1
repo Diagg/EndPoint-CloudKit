@@ -7,7 +7,6 @@
         # Version 1.5 - 22/04/2022 - Added Hostname, Ip Address, OS Architecture, OS version
         # Version 1.6 - 26/04/2022 - Detection is now done in full scope by default. FullGather parameter is removed
         # Version 1.7 - 28/04/2022 - Added parameter $ContentPath, added ContentPath in $ECK object
-        # Version 1.8 - 10/11/2022 - Fixed a break if network was unavailable          
 
         Param (
                     [string]$LogPath = "C:\Windows\Logs\ECK",
@@ -34,7 +33,7 @@
                 LogFullName = $LogPath
                 ContentPath = $ContentPath
                 SystemHostName = $([System.Environment]::MachineName)
-                SystemIPAddress = $((Get-NetIPAddress -AddressFamily IPv4 -PrefixOrigin Dhcp -AddressState Preferred -ErrorAction SilentlyContinue).IPAddress)
+                SystemIPAddress = $((Get-NetIPAddress -AddressFamily IPv4 -PrefixOrigin Dhcp -AddressState Preferred).IPAddress)
                 OSArchitectureIsX64 = $([System.Environment]::Is64BitOperatingSystem)
                 OSVersion = $OSVersion
                 OSBuild = $((Get-ItemProperty 'HKLM:SOFTWARE\Microsoft\Windows NT\CurrentVersion').CurrentBuild)

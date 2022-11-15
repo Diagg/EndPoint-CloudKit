@@ -3,6 +3,8 @@
         # Version 1.1 - 13/04/2022 - Added support for Endpoint Cloud Kit own pending reboot
         # Version 1.2 - 13/04/2022 - Pending Reboot state is now included in $ECK environment variable
         # Version 1.3 - 23/05/2022 - Fixed a bug where parameter SkipfileRename was ignored !
+        # Version 1.3.1 - 14/11/2022 - Fixed logging when registry value were empty !
+        # Version 1.4 - 15/11/2022 - Fixed logic routine
 
         Param([switch]$SKipFileRename)
 
@@ -21,18 +23,21 @@
 
         ForEach ($Hash in $PendingTable.keys)
             {
+                If ($PendingReboot -eq $True){Break}
+
                 IF ($pendingTable[$Hash] -eq "")
                     {If ((Test-Path -Path $Hash) -eq $true){$PendingReboot = $true; Break}}
                 Else
                     {
                         ForEach ($Item in $($pendingTable[$Hash]).Split(";"))
                             {
-                                try {
-                                        Get-ItemProperty -Path $Hash -name $item -ErrorAction Stop | Out-Null
-                                        If ($SKipFileRename -and $item -like "*PendingFileRenameOperations*"){$PendingReboot = $false} Else {$PendingReboot = $true ; Break}
-
-                                    }
-                                catch {$PendingReboot = $false}
+                                $pendingState = Get-ItemProperty -Path $Hash -name $item -ErrorAction SilentlyContinue
+                                If ([string]::IsNullOrWhiteSpace($pendingState))
+                                    {$PendingReboot = $false} 
+                                ElseIf ($SKipFileRename -and $item -like "*PendingFileRenameOperations*")
+                                    {$PendingReboot = $false}
+                                Else
+                                    {$PendingReboot = $true; Break}
                             }
                     }
             }
@@ -43,5 +48,6 @@
         else
             {$ECK.PendingReboot = $PendingReboot}
 
+        Write-ECKLog -Message "Pending reboot: $PendingReboot"
         Return $PendingReboot
     }

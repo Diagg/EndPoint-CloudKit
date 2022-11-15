@@ -7,10 +7,11 @@
         # Version 1.5 - 22/05/2022 - Changed Logging messages on external downloads
         # Version 1.6 - 24/06/2022 - Added logic to logpath
         # Version 1.7 - 27/06/2022 - Added support fot Trevor Jones's Gist script New-WPFMessageBox
+        # Version 1.8 - 15/11/2022 - Fixed a fatal error in Download Script and execute
 
         Param (
                 [String[]]$Module,                                                                              # List of module to import separated by coma
-                [string]$LogPath,                                                                               # Defaut log file path
+                [string]$LogPath,                                                            # Defaut log file path
                 [bool]$NugetDevTool = $false,                                                                   # Allow installation of nuget.exe,
                 [Parameter(ParameterSetName="Contentload")][String[]]$ContentToLoad,                            # Download scripts form Github and place them in $ContentPath folder
                 [Parameter(ParameterSetName="Contentload")][String]$ContentPath = 'C:\ProgramData\ECK-Content', # Path where script are downloaded
@@ -24,6 +25,7 @@
                 Elseif ($null -ne $eck.LogFullName){$LogPath = $eck.LogFullName}
                 Else {$LogPath = "C:\Windows\Logs\ECK\ECK-Init.log"}
             }
+
         ## Create Folders and registry keys
         If (-not (Test-Path $ContentPath)){New-Item $ContentPath -ItemType Directory -Force|Out-Null}
         If (-not (Test-Path $(Split-Path $LogPath ))){New-Item $(Split-Path $LogPath) -ItemType Directory -Force|Out-Null}
@@ -45,12 +47,12 @@
         $CurrentValue = [Environment]::GetEnvironmentVariable("PSModulePath", "Machine")
         If ($CurrentValue -notlike "*C:\Program Files\WindowsPowerShell\scripts*") {[Environment]::SetEnvironmentVariable("PSModulePath", $CurrentValue + [System.IO.Path]::PathSeparator + "C:\Program Files\WindowsPowerShell\Scripts", "Machine")}
 
-        ## Unload Modules
-        Remove-Module Powershellget -Force -Confirm:$false -ErrorAction SilentlyContinue
-        Remove-Module PackageManagement -Force -Confirm:$false -ErrorAction SilentlyContinue
+       ## Unload Modules
+       Remove-Module Powershellget -Force -Confirm:$false -ErrorAction SilentlyContinue
+       Remove-Module PackageManagement -Force -Confirm:$false -ErrorAction SilentlyContinue
 
 
-        Try
+       Try
             {
                 ## install Nuget provider
                 If (-not(Test-path "C:\Program Files\PackageManagement\ProviderAssemblies\nuget\2.8.5.208\Microsoft.PackageManagement.NuGetProvider.dll"))
@@ -147,7 +149,7 @@
                         If (test-path $SrvUIPath){Write-ECKlog -Message "Successfully Downloaded $SrvUIPath !" -Path $LogPath} Else {Write-ECKlog -Message "[ERROR] Unable to download $SrvUIPath !" -Path $LogPath}
                     }
                 else
-                    {Write-ECKlog -Message "$SrvUIPath Already downloaded!"}
+                    {Write-ECKlog -Message "$SrvUIPath Already downloaded!" -Path $LogPath}
 
 
                 ##Install SerciceUI_X86.exe
@@ -155,7 +157,7 @@
                 If (-not (test-path $SrvUIPath))
                     {
                         Invoke-WebRequest -Uri $(Format-GitHubURL 'https://github.com/Diagg/EndPoint-CloudKit-Bootstrap/blob/master/ServiceUI/ServiceUI_x86.exe') -OutFile $SrvUIPath -ErrorAction SilentlyContinue
-                        If (test-path $SrvUIPath){Write-ECKlog -Message "Successfully Downloaded $SrvUIPath !"} Else {Write-ECKlog -Message "[ERROR] Unable to download $SrvUIPath !"}
+                        If (test-path $SrvUIPath){Write-ECKlog -Message "Successfully Downloaded $SrvUIPath !" -Path $LogPath} Else {Write-ECKlog -Message "[ERROR] Unable to download $SrvUIPath !" -Path $LogPath}
                     }
                 else
                     {Write-ECKlog -Message "$SrvUIPath Already downloaded!" -Path $LogPath}
@@ -165,30 +167,35 @@
                 If ($Script_newwpfmessagebox -notin $ScriptToImport){$ScriptToImport += $Script_newwpfmessagebox ; $ScriptToImport = $ScriptToImport|Sort-Object -Descending}
 
                 # Download Script and execute
-                Foreach ($cript in $ScriptToImport)
+                If (-not([string]::IsNullOrWhiteSpace($ScriptToImport)))
                     {
-                        Try
+                        Foreach ($cript in $ScriptToImport)
                             {
-                                $Fileraw = Get-ECKGithubContent -URI $cript
-                                Write-ECKlog -Message "Running script $($Script.split("/")[-1]) !!!" -Path $LogPath
-                                Invoke-expression $Fileraw -ErrorAction stop
+                                Try
+                                    {
+                                        $Fileraw = Get-ECKGithubContent -URI $cript
+                                        Write-ECKlog -Message "Running script $($cript.split("/").split("#")[-1]) !!!" -Path $LogPath
+                                        Invoke-expression $Fileraw -ErrorAction stop
+                                    }
+                                Catch
+                                    {Write-ECKlog -Message "[ERROR] Unable to get script content or error in execution, Aborting !!!" -Path $LogPath; Exit 1}
                             }
-                        Catch
-                            {Write-ECKlog -Message "[ERROR] Unable to get script content or error in execution, Aborting !!!" -Path $LogPath ; Exit 1}
                     }
 
-
                 # Download Script and store them
-                Foreach ($File in $ContentToLoad)
+                If (-not([string]::IsNullOrWhiteSpace($ContentToLoad)))
                     {
-                        Try
+                        Foreach ($File in $ContentToLoad)
                             {
-                                $Fileraw = Get-ECKGithubContent -URI $File
-                                Write-ECKlog -Message "Succesfully downloaded content to $ContentPath\$($File.split("/")[-1]) !!!" -Path $LogPath
-                                $Fileraw | Out-File -FilePath "$ContentPath\$($File.split("/")[-1])" -Encoding utf8 -force
+                                Try
+                                    {
+                                        $Fileraw = Get-ECKGithubContent -URI $File
+                                        Write-ECKlog -Message "Succesfully downloaded content to $ContentPath\$($File.split("/")[-1]) !!!" -Path $LogPath
+                                        $Fileraw | Out-File -FilePath "$ContentPath\$($File.split("/").split("#")[-1])" -Encoding utf8 -force
+                                    }
+                                Catch
+                                    {Write-ECKlog -Message "[ERROR] Unable to get content, Aborting !!!" -Path $LogPath; Exit 1}
                             }
-                        Catch
-                            {Write-ECKlog -Message "[ERROR] Unable to get content, Aborting !!!" -Path $LogPath ; Exit 1}
                     }
 
                 Write-ECKlog -Message "All initialization operations finished, Endpoint Cloud Kit and other dependencies staged sucessfully!!!" -Path $LogPath
